@@ -6,7 +6,7 @@ class Client {
     }
 
     send(msg) {
-        let byteId = new TextEncoder().encode(msg);
+        let byteId = new TextEncoder().encode(msg.type);
         console.log(`Sending message ${msg} in byteArray ` + byteId);
         this.conn.send(byteId, function ack(err) {
             if (err) {

@@ -9,7 +9,7 @@ class ConnectionManager {
 
         this.conn.addEventListener('open', () => {
             console.log('Connection established');
-            this.conn.send('create-session');
+            this.send('create-session');
         });
 
         this.conn.addEventListener('message', event => {
@@ -17,5 +17,11 @@ class ConnectionManager {
             let str = new TextDecoder().decode(event.data);
             console.log(str);
         });
+    }
+
+    send(data) {
+        const msg = new TextEncoder().encode(data);
+        console.log(`Sending msg {msg} in byteArray ` + msg);
+        this.conn.send(msg);
     }
 }

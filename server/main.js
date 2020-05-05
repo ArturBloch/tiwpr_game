@@ -19,23 +19,28 @@ wss.on('connection', conn => {
     const client = new Client(conn);
 
     conn.on('message', msg => {
-        console.log('Message received %s', msg);
-
-        if (msg === 'create-session') {
-            const session = new Session(startingId);
-            startingId++;
-            session.join(client);
-            sessions.set(session.id, session);
-            client.send(session.id);
+            console.log('Message received %s in Array Buffer', msg);
+            let decodedMsg = new TextDecoder().decode(msg);
+            console.log("Decoded msg " + decodedMsg);
+            if (decodedMsg.search("create-session") !== -1) {
+                const session = new Session(startingId);
+                startingId++;
+                session.join(client);
+                sessions.set(session.id, session);
+                client.send({
+                    type: 'session-created',
+                    id: session.id
+                });
+            }
         }
-    });
+    );
 
     conn.on('close', () => {
         console.log('Connection closed');
         const session = client.session;
-        if(session){
+        if (session) {
             session.leave(client);
-            if(session.clients.size === 0){
+            if (session.clients.size === 0) {
                 sessions.delete(session.id);
             }
         }

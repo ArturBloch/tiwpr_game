@@ -1,6 +1,7 @@
 class ConnectionManager {
-    constructor() {
+    constructor(arena) {
         this.conn = null;
+        this.arena = arena;
     }
 
     connect(address) {
@@ -54,9 +55,13 @@ class ConnectionManager {
         for (let i = 0; i < messages.length; i++) {
             if (messages[i] === "session-created") {
                 let value = messages[++i];
-
                 console.log("id " + value);
                 window.location.hash = value;
+            }
+            if (messages[i] === "time-update") {
+                let value = messages[++i];
+                arena.setTime(value, performance.now());
+                console.log("new time" + value);
             }
         }
     }

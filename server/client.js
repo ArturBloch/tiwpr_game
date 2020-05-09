@@ -8,7 +8,7 @@ class Client {
 
     send(msg) {
         let finalMsg = msg[0].type + " " + msg[0].value;
-        for (var i = 1; i < msg.length; i++) {
+        for (let i = 1; i < msg.length; i++) {
             finalMsg = finalMsg + " " + msg[i].type + " " + msg[i].value;
         }
         let byteId = new TextEncoder().encode(finalMsg);

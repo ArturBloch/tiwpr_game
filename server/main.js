@@ -2,7 +2,7 @@ const express = require('express');
 const WebSocket = require('ws');
 const Session = require('./session');
 const Client = require('./client');
-const { v4: uuidv4 } = require('uuid');
+const {v4: uuidv4} = require('uuid');
 
 const app = express();
 const server = app.listen(3000, function () {
@@ -14,20 +14,21 @@ app.use(express.static('public'));
 const wss = new WebSocket.Server({server});
 const sessions = new Map;
 
-function createId(){
+function createId() {
     return uuidv4();
 }
 
-function createClient(conn, id = createId()){
+function createClient(conn, id = createId()) {
     return new Client(conn, id);
 }
 
-function createSession(id = createId()){
-    if(sessions.has(id)){
+function createSession(id = createId()) {
+    if (sessions.has(id)) {
         throw new Error("Session already exists");
     }
 
     const session = new Session(id);
+
     console.log("Creating session", session);
 
     sessions.set(id, session);
@@ -35,7 +36,7 @@ function createSession(id = createId()){
     return session;
 }
 
-function getSession(id){
+function getSession(id) {
     return sessions.get(id);
 }
 
@@ -64,12 +65,25 @@ wss.on('connection', conn => {
     conn.on('close', () => {
         console.log('Connection closed');
         const session = client.session;
-        if (session) {
-            session.leave(client);
-            if (session.clients.size === 0) {
-                sessions.delete(session.id);
-            }
-        }
+        // if (session) {
+        //     session.leave(client);
+        //     if (session.clients.size === 0) {
+        //         sessions.delete(session.id);
+        //     }
+        // }
     });
 });
 
+
+function updateClients() {
+    setInterval(function () {
+        sessions.forEach(function (session) {
+            session.update();
+            session.sendUpdate();
+        });
+
+    }, 500);
+}
+
+
+updateClients();

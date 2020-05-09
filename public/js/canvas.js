@@ -7,12 +7,14 @@ canvas.width = window.innerWidth;
 let cellSize = Math.floor(canvas.width / 30);
 let boardWidth = 6 * cellSize;
 const spriteSheet = new Image();
+const arena = new Arena();
+
 const myself = new Player({id : 1, name: "Artur"});
 const enemy = new Player({id : 2, name: "Mariusz"});
 const fontSize = 50;
 const fontBase = 1920;
 
-const connectionManager = new ConnectionManager();
+const connectionManager = new ConnectionManager(arena);
 connectionManager.connect('ws://localhost:3000/index');
 
 function getTextWidth(text) {
@@ -116,15 +118,10 @@ function print(time) {
 }
 
 function update() {
-    let t1 = 0;
     setInterval(function () {
-        let t0 = performance.now();
         drawBoard()
-        let secondsLeft = 5 - Math.floor((t0 - t1) / 1000);
-        print(secondsLeft)
-        if (secondsLeft === 0) {
-            t1 = performance.now();
-        }
+        arena.update(performance.now());
+        print(arena.getTime());
     }, 10);
 }
 

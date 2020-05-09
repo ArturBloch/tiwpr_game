@@ -2,6 +2,7 @@ const express = require('express');
 const WebSocket = require('ws');
 const Session = require('./session');
 const Client = require('./client');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const server = app.listen(3000, function () {
@@ -12,26 +13,51 @@ app.use(express.static('public'));
 
 const wss = new WebSocket.Server({server});
 const sessions = new Map;
-let startingId = 0;
+
+function createId(){
+    return uuidv4();
+}
+
+function createClient(conn, id = createId()){
+    return new Client(conn, id);
+}
+
+function createSession(id = createId()){
+    if(sessions.has(id)){
+        throw new Error("Session already exists");
+    }
+
+    const session = new Session(id);
+    console.log("Creating session", session);
+
+    sessions.set(id, session);
+
+    return session;
+}
+
+function getSession(id){
+    return sessions.get(id);
+}
 
 wss.on('connection', conn => {
     console.log('Connection established');
-    const client = new Client(conn);
+    const client = createClient(conn);
 
     conn.on('message', msg => {
-            console.log('Message received %s in Array Buffer', msg);
             let decodedMsg = new TextDecoder().decode(msg);
-            console.log("Decoded msg " + decodedMsg);
-            if (decodedMsg.search("create-session") !== -1) {
-                const session = new Session(startingId);
-                startingId++;
+            let messages = decodedMsg.split(" ");
+            if (messages[0] === 'create-session') {
+                const session = createSession();
                 session.join(client);
-                sessions.set(session.id, session);
-                client.send({
+                client.send([{
                     type: 'session-created',
-                    id: session.id
-                });
+                    value: session.id
+                }]);
+            } else if (messages[0] === 'join-session') {
+                const session = getSession(messages[1]) || createSession(messages[1]);
+                session.join(client);
             }
+            console.log('Sessions', sessions);
         }
     );
 

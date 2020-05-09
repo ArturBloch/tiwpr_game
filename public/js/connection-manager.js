@@ -9,19 +9,59 @@ class ConnectionManager {
 
         this.conn.addEventListener('open', () => {
             console.log('Connection established');
-            this.send('create-session');
+            this.initSession();
         });
 
         this.conn.addEventListener('message', event => {
             console.log('Message received', event.data);
-            let str = new TextDecoder().decode(event.data);
-            console.log(str);
+            this.receive(event.data);
         });
     }
 
+    initSession() {
+        const sessionId = window.location.hash.split('#')[1];
+        console.log("sess id" + sessionId);
+        if (sessionId) {
+            this.send([{
+                type: 'join-session',
+                value: sessionId
+            }]);
+        } else {
+            this.send([{
+                type: 'create-session',
+            }]);
+        }
+    }
+
     send(data) {
-        const msg = new TextEncoder().encode(data);
-        console.log(`Sending msg {msg} in byteArray ` + msg);
-        this.conn.send(msg);
+        let finalMSG = "";
+        for (let i = 0; i < data.length; i++) {
+            finalMSG = finalMSG === "" ? data[i].type : finalMSG + " " + data[i].type;
+            finalMSG = data[i].value === undefined ? finalMSG : finalMSG + " " + data[i].value;
+        }
+        let byteId = new TextEncoder().encode(finalMSG);
+        console.log(`Sending message ${data} in byteArray ` + byteId);
+        this.conn.send(byteId, function ack(err) {
+            if (err) {
+                console.error('Message failed', byteId, err);
+            }
+        });
+    }
+
+    receive(data) {
+        let str = this.decodeMsg(data);
+        let messages = str.split(" ");
+        for (let i = 0; i < messages.length; i++) {
+            if (messages[i] === "session-created") {
+                let value = messages[++i];
+
+                console.log("id " + value);
+                window.location.hash = value;
+            }
+        }
+    }
+
+    decodeMsg(data) {
+        return new TextDecoder().decode(data);
     }
 }

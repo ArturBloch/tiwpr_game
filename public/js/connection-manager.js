@@ -2,6 +2,7 @@ class ConnectionManager {
     constructor(arena) {
         this.conn = null;
         this.arena = arena;
+        this.id = "";
     }
 
     connect(address) {
@@ -10,6 +11,7 @@ class ConnectionManager {
 
         this.conn.addEventListener('open', () => {
             console.log('Connection established');
+            this.initializeConnection();
             this.initSession();
         });
 
@@ -24,12 +26,13 @@ class ConnectionManager {
         console.log("sess id" + sessionId);
         if (sessionId) {
             this.send([{
-                type: 'join-session',
-                value: sessionId
-            }]);
+                    type: 'join-session',
+                    value: [sessionId]
+                }]);
         } else {
             this.send([{
                 type: 'create-session',
+                value: []
             }]);
         }
     }
@@ -38,10 +41,12 @@ class ConnectionManager {
         let finalMSG = "";
         for (let i = 0; i < data.length; i++) {
             finalMSG = finalMSG === "" ? data[i].type : finalMSG + " " + data[i].type;
-            finalMSG = data[i].value === undefined ? finalMSG : finalMSG + " " + data[i].value;
+            for (let j = 0; j < data[i].value.length; j++) {
+                finalMSG = data[i].value[j] === undefined ? finalMSG : finalMSG + " " + data[i].value[j];
+            }
         }
         let byteId = new TextEncoder().encode(finalMSG);
-        console.log(`Sending message ${data} in byteArray ` + byteId);
+        console.log(`Sending message ${finalMSG} in byteArray ` + byteId);
         this.conn.send(byteId, function ack(err) {
             if (err) {
                 console.error('Message failed', byteId, err);
@@ -63,10 +68,33 @@ class ConnectionManager {
                 arena.setTime(value, performance.now());
                 console.log("new time" + value);
             }
+            if (messages[i] === "client-id") {
+                let value = messages[++i];
+                this.id = value;
+                localStorage.setItem("id", value);
+                console.log("my id " + this.id);
+            }
         }
     }
 
     decodeMsg(data) {
         return new TextDecoder().decode(data);
     }
+
+    initializeConnection(){
+        let storedId = localStorage.getItem("id");
+        console.log("my id is " + storedId);
+        if(storedId === null){
+            this.send([{
+                type: 'welcome',
+                value: []
+            }]);
+        } else {
+            this.send([{
+                type: 'welcome-again',
+                value: [storedId],
+            }]);
+        }
+    }
+
 }

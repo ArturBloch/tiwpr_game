@@ -1,8 +1,7 @@
 class Client {
-    constructor(conn, id) {
+    constructor(conn) {
         this.conn = conn;
         this.conn.binaryType = "arraybuffer";
-        this.id = id;
         this.session = null;
     }
 
@@ -12,7 +11,7 @@ class Client {
             finalMsg = finalMsg + " " + msg[i].type + " " + msg[i].value;
         }
         let byteId = new TextEncoder().encode(finalMsg);
-        console.log(`Sending message ${msg} in byteArray ` + byteId);
+        console.log("Sending message " + finalMsg + " in array " + byteId);
         this.conn.send(byteId, function ack(err) {
             if (err) {
                 console.error('Message failed', byteId, err);

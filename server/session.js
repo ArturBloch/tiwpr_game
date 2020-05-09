@@ -18,10 +18,12 @@ class Session {
             this.arena.player1 = client;
             this.clients.add(client);
             client.session = this;
+            return;
         } else if (Object.keys(this.arena.player2).length === 0) {
             this.arena.player2 = client;
             this.clients.add(client);
             client.session = this;
+            return;
         }
         if(client.id === this.arena.player1.id || client.id === this.arena.player2.id){
             this.reconnectClient();
@@ -31,7 +33,7 @@ class Session {
     }
 
     reconnectClient(){
-        console.log("WOOOW");
+        console.log("Client Reconnected");
     };
 
     leave(client) {

@@ -1,12 +1,27 @@
-class Player {
-    constructor({id = 0, name = "", gold = 0} = {}) {
+const Cell = require('./cell');
+module.exports =  class Player {
+    constructor({id = 0, name = "", gold = 0} = {}, client = {}, ) {
+        this.client = client;
         this.id = id;
-        this.name = name;
         this.gold = gold;
-        this.arena = {};
+        this.map = [[]];
+        for (let i = 0; i < 6; i++) {
+            this.map[i] = [];
+            for (let j = 0; j < 6; j++) {
+                this.map[i][j] = new Cell();
+            }
+        }
+        this._name = name;
     }
-}
 
-try {
-    module.exports = exports = Player;
-} catch (e) {}
+
+    get name() {
+        return this._name;
+    }
+
+    set name(value) {
+        this._name = value;
+    }
+
+
+}

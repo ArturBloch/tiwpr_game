@@ -1,8 +1,9 @@
-class Client {
-    constructor(conn) {
+module.exports = class Client {
+    constructor(conn, id) {
         this.conn = conn;
         this.conn.binaryType = "arraybuffer";
         this.session = null;
+        this.id = id;
     }
 
     send(msg) {
@@ -14,10 +15,8 @@ class Client {
         console.log("Sending message " + finalMsg + " in array " + byteId);
         this.conn.send(byteId, function ack(err) {
             if (err) {
-                console.error('Message failed', byteId, err);
+                console.error('Message failed lost connection!', conn.id);
             }
         });
     }
 }
-
-module.exports = Client;

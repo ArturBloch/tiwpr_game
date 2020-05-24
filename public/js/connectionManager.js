@@ -1,4 +1,4 @@
-class ConnectionManager {
+module.exports = class ConnectionManager {
     constructor(arena) {
         this.conn = null;
         this.arena = arena;
@@ -60,19 +60,23 @@ class ConnectionManager {
         for (let i = 0; i < messages.length; i++) {
             if (messages[i] === "session-created") {
                 let value = messages[++i];
-                console.log("id " + value);
+                // console.log("id " + messages[++i]);
                 window.location.hash = value;
             }
             if (messages[i] === "time-update") {
+                this.arena.setTime(messages[++i], performance.now());
+                // console.log("new time" + this.arena.timer);
+            }
+            if (messages[i] === "current-player") {
                 let value = messages[++i];
-                arena.setTime(value, performance.now());
-                console.log("new time" + value);
+                this.arena.setCurrentPlayer(value)
+                console.log("update player ", value)
+                // console.log("player turn" + this.arena.currentPlayer.name);
             }
             if (messages[i] === "client-id") {
                 let value = messages[++i];
-                this.id = value;
                 localStorage.setItem("id", value);
-                console.log("my id " + this.id);
+                // console.log("my id " + this.id);
             }
         }
     }
@@ -96,5 +100,4 @@ class ConnectionManager {
             }]);
         }
     }
-
 }

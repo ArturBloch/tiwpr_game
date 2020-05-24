@@ -1,5 +1,4 @@
 const Arena = require('./../common/arena');
-const Client = require('./client');
 const performance = require('perf_hooks').performance;
 const WebSocket = require('ws');
 
@@ -12,20 +11,21 @@ class Session {
 
     join(client) {
         if (client.session) {
-            throw new Error('Client already in session');
+            console.error('Client already in session');
+        } else {
+            if (Object.keys(this.arena.player1.client).length === 0) {
+                this.arena.player1.client = client;
+                this.clients.add(client);
+                client.session = this;
+                return;
+            } else if (Object.keys(this.arena.player2.client).length === 0) {
+                this.arena.player2.client = client;
+                this.clients.add(client);
+                client.session = this;
+                return;
+            }
         }
-        if (Object.keys(this.arena.player1).length === 0) {
-            this.arena.player1 = client;
-            this.clients.add(client);
-            client.session = this;
-            return;
-        } else if (Object.keys(this.arena.player2).length === 0) {
-            this.arena.player2 = client;
-            this.clients.add(client);
-            client.session = this;
-            return;
-        }
-        if(client.id === this.arena.player1.id || client.id === this.arena.player2.id){
+        if(client.id === this.arena.player1.client.id || client.id === this.arena.player2.client.id){
             this.reconnectClient();
         } else {
             console.log("Session full");
@@ -50,16 +50,45 @@ class Session {
     }
 
     sendUpdate() {
-        this.arena.player1.send([{
-            type: 'time-update',
-            value: this.arena.timer,
-        }]);
-        if (Object.keys(this.arena.player2).length !== 0 && this.arena.player2.conn.readyState !== WebSocket.CLOSED) {
-            this.arena.player2.send([{
+        this.timerUpdates()
+        this.currentPlayerUpdate()
+    }
+
+    timerUpdates(){
+        if (this.playerConnectionReady(this.arena.player1)) {
+            this.arena.player1.client.send([{
                 type: 'time-update',
                 value: this.arena.timer,
             }]);
         }
+        if (this.playerConnectionReady(this.arena.player2)) {
+            this.arena.player2.client.send([{
+                type: 'time-update',
+                value: this.arena.timer,
+            }]);
+        }
+    }
+
+    currentPlayerUpdate() {
+        if (this.playerConnectionReady(this.arena.player1)) {
+            this.arena.player1.client.send([{
+                type: 'current-player',
+                value: this.arena.playerTurn.id,
+            }]);
+        }
+        if (this.playerConnectionReady(this.arena.player2)) {
+            this.arena.player2.client.send([{
+                type: 'current-player',
+                value: this.arena.playerTurn.id,
+            }]);
+        }
+    }
+
+    playerConnectionReady(player){
+        if (Object.keys(player.client).length !== 0 && player.client.conn.readyState !== WebSocket.CLOSED) {
+            return true;
+        }
+        return false;
     }
 }
 

@@ -3,7 +3,6 @@ const WebSocket = require('ws');
 const Session = require('./session');
 const Client = require('./client');
 const {v4: uuidv4} = require('uuid');
-const session = require('express-session')
 const app = express();
 
 
@@ -62,6 +61,7 @@ wss.on('connection', conn => {
                     session.join(client);
                 } else if (messages[i] === 'welcome-again') {
                     if (clients.has(messages[i+1])) {
+                        console.log("Welcome again " + messages[i+1])
                         client = clients.get(messages[++i]);
                         client.conn = conn;
                     } else {
@@ -78,15 +78,19 @@ wss.on('connection', conn => {
     conn.on('close', () => {
         console.log('Connection closed');
         const session = client.session;
+        console.log('Sessions', sessions);
         if (session) {
-            session.leave(client);
-            if (session.clients.size === 0) {
-                sessions.delete(session.id);
+            try {
+                session.leave(client);
+                if (session.clients.size === 0) {
+                    sessions.delete(session.id);
+                }
+            } catch(e){
+                Console.error(e.message);
             }
         }
     });
 });
-
 
 function createNewUser(client) {
     let clientId = createId();

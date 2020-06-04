@@ -34,7 +34,7 @@ class Session {
 
     reconnectClient(){
         console.log("Client Reconnected");
-    };
+    }
 
     leave(client) {
         if (client.session !== this) {

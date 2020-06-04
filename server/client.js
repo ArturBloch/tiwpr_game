@@ -1,4 +1,5 @@
 module.exports = class Client {
+
     constructor(conn, id) {
         this.conn = conn;
         this.conn.binaryType = "arraybuffer";
@@ -15,7 +16,7 @@ module.exports = class Client {
         console.log("Sending message " + finalMsg + " in array " + byteId);
         this.conn.send(byteId, function ack(err) {
             if (err) {
-                console.error('Message failed lost connection!', conn.id);
+                console.error('Message failed lost connection!', this.conn.id);
             }
         });
     }

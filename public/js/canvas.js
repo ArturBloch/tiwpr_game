@@ -20,15 +20,17 @@ const fontBase = 1920;
 
 connectionManager.connect('ws://localhost:3000/index');
 
-var rects = [];
+const rects = [];
 
-function getTextWidth(text) {
+function getTextWidth(text)
+{
     context.font = getFont();
     const metrics = context.measureText(text);
     return metrics.width;
 }
 
-function getFontSize() {
+function getFontSize()
+{
     const ratio = fontSize / fontBase;
     return canvas.width * ratio;
 }

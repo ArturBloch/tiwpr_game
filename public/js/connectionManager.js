@@ -59,9 +59,7 @@ module.exports = class ConnectionManager {
         let messages = str.split(" ");
         for (let i = 0; i < messages.length; i++) {
             if (messages[i] === "session-created") {
-                let value = messages[++i];
-                // console.log("id " + messages[++i]);
-                window.location.hash = value;
+                window.location.hash = messages[++i];
             }
             if (messages[i] === "time-update") {
                 this.arena.setTime(messages[++i], performance.now());

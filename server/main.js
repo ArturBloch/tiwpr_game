@@ -86,7 +86,7 @@ wss.on('connection', conn => {
                     sessions.delete(session.id);
                 }
             } catch(e){
-                Console.error(e.message);
+                console.error(e.message);
             }
         }
     });

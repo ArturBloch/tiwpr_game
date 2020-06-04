@@ -4,7 +4,7 @@
   "description": "",
   "main": "server/main.js",
   "scripts": {
-    "make" : "browserify ./public/js/canvas.js ./public/js/connectionManager.js ./common/arena.js ./common/cell.js ./common/player.js -o ./public/js/bundle.js",
+    "make": "browserify ./public/js/canvas.js ./public/js/connectionManager.js ./common/arena.js ./common/cell.js ./common/player.js -o ./public/js/bundle.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,6 +16,7 @@
     "ws": "^7.2.5"
   },
   "devDependencies": {
-    "browserify": "^16.5.1"
+    "browserify": "^16.5.1",
+    "eslint": "^7.1.0"
   }
 }

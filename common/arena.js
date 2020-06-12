@@ -4,9 +4,10 @@ module.exports = class Arena {
     constructor() {
         this.timer = 5;
         this.prevTime = 0;
-        this.player1 = new Player({ id : 1, name: "Player1"});
-        this.player2 = new Player({ id : 2, name: "Player2"});
+        this.player1 = new Player({ id : 1, name: ""});
+        this.player2 = new Player({ id : 2, name: ""});
         this.playerTurn = this.player1;
+        this.paused = true;
     }
 
     start(){
@@ -14,13 +15,15 @@ module.exports = class Arena {
     }
 
     update(nowTime) {
+        if (!this.paused) {
         this.timer = (this.timer - (nowTime - this.prevTime) / 1000);
-        if(this.timer < 0){
+        if (this.timer < 0) {
             console.log("timer = ", this.timer);
             this.timer += 5;
             this.switchPlayer();
         }
         this.prevTime = nowTime;
+        }
     }
 
     setTime(newTime, prevTime){
@@ -29,7 +32,7 @@ module.exports = class Arena {
     }
 
     getTime(){
-        return this.timer.toFixed(2);
+        return Number(this.timer).toFixed(2);
     }
 
     switchPlayer() {

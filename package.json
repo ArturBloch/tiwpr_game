@@ -4,13 +4,17 @@
   "description": "",
   "main": "server/main.js",
   "scripts": {
-    "make": "browserify ./public/js/canvas.js ./public/js/connectionManager.js ./common/arena.js ./common/cell.js ./common/player.js -o ./public/js/bundle.js",
+    "lobbyPage": "browserify ./public/js/mainPage.js ./common/events.js ./public/js/connectionManager.js -o ./public/js/mainPageBundle.js",
+    "makeArena": "browserify ./public/js/canvas.js ./common/events.js ./public/js/connectionManager.js ./common/arena.js ./common/cell.js ./common/player.js -o ./public/js/arenaBundle.js",
+    "make": "npm run lobbyPage && npm run makeArena",
+    "start": "npm run make && node server/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bootstrap": "^4.5.0",
     "express": "^4.17.1",
     "uuid": "^8.0.0",
     "ws": "^7.2.5"

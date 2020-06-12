@@ -2,14 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MultiDodge</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="css/main.css">
+    <title>tiwpr_game</title>
 </head>
 <body>
+<form>
+    <div class="form-row">
+        <div class="col-md-2 m-1">
+            <input id="nameForm" class="form-control" placeholder="First name">
+        </div>
+        <input type="button" id="changeName" type="submit" class="btn btn-primary" value="Change name">
+    </div>
+</form>
+<div
+<div class="row m-1">
+    <input type="button" id="createLobby" class="btn btn-primary m-1" value ="Create Lobby">
+    <input type="button" id="refreshLobby" class="btn btn-primary m-1" value ="Refresh Lobbies">
+</div>
+<table class="table table-dark col-md-6 text-center">
+        <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">Players in lobby</th>
+            <th scope="col">First Player</th>
+            <th scope="col">Second Player</th>
+        </tr>
+        </thead>
+        <tbody id="lobbyTBody">
+        </tbody>
+    </table>
 
-<canvas></canvas>
-
-<script src="js/bundle.js"></script>
-
+<footer class="page-footer font-small blue pt-4">
+    <div>
+        <p>Copyright © Artur Bloch 2020 Tiwpr Game</p>
+    </div>
+</footer>
+<script src="js/mainPageBundle.js"></script>
 </body>
 </html>

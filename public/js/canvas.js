@@ -1,10 +1,8 @@
 const canvas = document.querySelector('canvas');
 const context = canvas.getContext('2d');
-const Arena = require('../../common/arena');
 const ConnManager = require('./connectionManager');
-const arena = new Arena();
-const connectionManager = new ConnManager(arena);
-
+const connectionManager = new ConnManager();
+const arena = connectionManager.arena;
 canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
 
@@ -22,15 +20,13 @@ connectionManager.connect('ws://localhost:3000/index');
 
 const rects = [];
 
-function getTextWidth(text)
-{
+function getTextWidth(text) {
     context.font = getFont();
     const metrics = context.measureText(text);
     return metrics.width;
 }
 
-function getFontSize()
-{
+function getFontSize() {
     const ratio = fontSize / fontBase;
     return canvas.width * ratio;
 }
@@ -49,12 +45,12 @@ function loadSprites() {
     }
 }
 
-canvas.onmousemove = function(e) {
+canvas.onmousemove = function (e) {
     mouseX = e.clientX;
     mouseY = e.clientY;
 };
 
-function createRectangleArray(id){
+function createRectangleArray(id) {
     cellSize = Math.floor(canvas.width / 30);
     boardWidth = 6 * cellSize;
     let distance = canvas.width - 6 * cellSize - boardWidth * 2;
@@ -111,8 +107,7 @@ function drawGrid({id}) {
         }
         context.beginPath();
         context.lineWidth = 2;
-        if(mouseX > deltaX + x * cellSize && mouseX < deltaX + x * cellSize + cellSize && mouseY > deltaY + y * cellSize && mouseY < deltaY + y * cellSize + cellSize)
-        {
+        if (mouseX > deltaX + x * cellSize && mouseX < deltaX + x * cellSize + cellSize && mouseY > deltaY + y * cellSize && mouseY < deltaY + y * cellSize + cellSize) {
             highlightSquareX = deltaX + x * cellSize;
             highlightSquareY = deltaY + y * cellSize;
         }
@@ -120,7 +115,7 @@ function drawGrid({id}) {
         context.strokeRect(deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
         context.closePath();
     }
-    if(highlightSquareX !== -1){
+    if (highlightSquareX !== -1) {
         context.beginPath();
         context.strokeStyle = 'red';
         context.strokeRect(highlightSquareX, highlightSquareY, cellSize, cellSize);

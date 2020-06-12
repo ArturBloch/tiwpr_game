@@ -45,9 +45,65 @@ wss.on('connection', conn => {
     console.log('Connection established');
     let client = createClient(conn);
     conn.on('message', msg => {
-            handleMessage(conn, client, msg)
+        let decodedMsg = new TextDecoder().decode(msg);
+        let messages = decodedMsg.split(" ");
+        console.log("Got msg ", decodedMsg);
+        for (let i = 0; i < messages.length; i++) {
+            const message = messages[i++];
+            if (message === 'create-session') {
+                const session = createSession();
+                // session.join(client);
+                // client.send([{
+                //     type: 'session-created',
+                //     value: [session.id]
+                // }]);
+            } else if (message === 'join-session') {
+                const sessionId = messages[i++];
+                const session = getSession(sessionId) || createSession(sessionId);
+                let value = "";
+                console.log(session);
+                if(session.isFull()) {
+                    value = "Session-is-full";
+                } else {
+                    value = sessionId;
+                }
+                session.join(client);
+                client.send([{
+                    type: 'session-join-result',
+                    value: [value]
+                }]);
+                i++;
+            } else if (message === 'welcome') {
+                if (clients.has(messages[i])) {
+                    console.log("Welcome again " + messages[i])
+                    client = clients.get(messages[i++]);
+                    client.conn = conn;
+                } else {
+                    createNewUser(client);
+                }
+            } else if(message === 'refresh-lobby-list'){
+                console.log("REFRESH THIS? LOL.");
+                let arr = [];
+                console.log(sessions.values());
+                for (const value of sessions.values()) {
+                    let playerOneName = value.client1 === null ? "null" : value.client1.name;
+                    let playerTwoName = value.client2 === null ? "null" : value.client2.name;
+                    arr.push(value.id, playerOneName, playerTwoName);
+                }
+                arr.push("END");
+                client.send([{
+                    type: 'refresh-lobby-list',
+                    value: arr
+                }]);
+            } else if(message === 'change-name'){
+                client.name = messages[i++];
+                client.send([{
+                    type: 'new-name',
+                    value: [client.name]
+                }]);
+            }
         }
-    );
+    });
 
     conn.on('close', () => {
         console.log('Connection closed');
@@ -65,68 +121,6 @@ wss.on('connection', conn => {
         }
     });
 });
-
-function handleMessage(connection, client, msg){
-    let decodedMsg = new TextDecoder().decode(msg);
-    let messages = decodedMsg.split(" ");
-    console.log("Got msg ", decodedMsg);
-    for (let i = 0; i < messages.length; i++) {
-        const message = messages[i++];
-        if (message === 'create-session') {
-            const session = createSession();
-            // session.join(client);
-            // client.send([{
-            //     type: 'session-created',
-            //     value: [session.id]
-            // }]);
-        } else if (message === 'join-session') {
-            const sessionId = messages[i++];
-            const session = getSession(sessionId) || createSession(sessionId);
-            let value = "";
-            console.log(session);
-            if(session.isFull()) {
-                value = "Session-is-full";
-            } else {
-                value = sessionId;
-            }
-                session.join(client);
-                client.send([{
-                    type: 'session-join-result',
-                    value: [value]
-                }]);
-            i++;
-        } else if (message === 'welcome') {
-            if (clients.has(messages[i])) {
-                console.log("Welcome again " + messages[i])
-                client = clients.get(messages[i++]);
-                client.conn = connection;
-            } else {
-                createNewUser(client);
-            }
-        } else if(message === 'refresh-lobby-list'){
-            console.log("REFRESH THIS? LOL.");
-            let arr = [];
-            console.log(sessions.values());
-            for (const value of sessions.values()) {
-                let playerOneName = value.client1 === null ? "null" : value.client1.name;
-                let playerTwoName = value.client2 === null ? "null" : value.client2.name;
-                arr.push(value.id, playerOneName, playerTwoName);
-            }
-            arr.push("END");
-            client.send([{
-                type: 'refresh-lobby-list',
-                value: arr
-            }]);
-        } else if(message === 'change-name'){
-            client.name = messages[i++];
-            client.send([{
-                type: 'new-name',
-                value: [client.name]
-            }]);
-        }
-    }
-    // console.log('Sessions', sessions);
-}
 
 function createNewUser(client) {
     let clientId = createId();

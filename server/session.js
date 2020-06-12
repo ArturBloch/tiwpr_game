@@ -6,13 +6,13 @@ class Session {
     constructor(id) {
         this.id = id;
         this.arena = new Arena();
-        this.inactive = 0;
         this.client1 = null;
         this.client2 = null;
     }
 
     join(client) {
         console.log("client joining");
+        console.log(client.session);
         if (client.session) {
             console.error('Client already in session');
         } else {
@@ -25,24 +25,14 @@ class Session {
                 console.log("added client 2");
                 this.client2 = client;
                 client.session = this;
+                console.log(this)
                 return;
             }
-            // if (Object.keys(this.arena.player1.client).length === 0) {
-            //     this.arena.player1.client = client;
-            //     this.clients.add(client);
-            //     client.session = this;
-            //     return;
-            // } else if (Object.keys(this.arena.player2.client).length === 0) {
-            //     this.arena.player2.client = client;
-            //     this.clients.add(client);
-            //     client.session = this;
-            //     return;
-            // }
         }
-        if(client.id === this.client1.id || client.id === this.client2.id){
+        if((this.client1 !== null && client.id === this.client1.id) || (this.client2 !== null && client.id === this.client2.id)){
             this.reconnectClient();
         } else {
-            console.log("Session full");
+            console.log("Session full or user belongs to other session");
         }
     }
 
@@ -76,6 +66,7 @@ class Session {
             }]);
         }
         if (this.playerConnectionReady(this.client2)) {
+            console.log("P2 ready");
             this.client2.send([{
                 type: 'time-update',
                 value: [this.arena.timer]

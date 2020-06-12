@@ -20,6 +20,11 @@ connectionManager.connect('ws://localhost:3000/index');
 
 const rects = [];
 
+const sessionId = window.location.hash.split('#')[1];
+connectionManager.conn.onopen = function(){
+    connectionManager.joinSession(sessionId);
+}
+
 function getTextWidth(text) {
     context.font = getFont();
     const metrics = context.measureText(text);

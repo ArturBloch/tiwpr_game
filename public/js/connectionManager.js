@@ -7,6 +7,7 @@ module.exports = class ConnectionManager {
         this.storedName = localStorage.getItem("name");
         this.conn = null;
         this.events = new Events();
+        console.log("HELLO");
         this.arena = new Arena();
         this.id = "";
     }
@@ -86,6 +87,7 @@ module.exports = class ConnectionManager {
             if (message === "new-name") {
                 let value = messages[i++];
                 localStorage.setItem("name", value);
+                this.arena.player1.name = value;
                 this.events.emit('change-name', value);
                 // console.log("my id " + this.id);
             }
@@ -101,7 +103,26 @@ module.exports = class ConnectionManager {
             if (message === "session-join-result") {
                 let response = messages[i++];
                 this.events.emit('join-session-response', response);
-                // console.log("my id " + this.id);
+            }
+            if (message === "maze-data") {
+                let y = 0;
+                let x = 0;
+                while(messages[i] !== "END"){
+                    this.arena.maze[y][x].top = messages[i++] === "1";
+                    this.arena.maze[y][x].bottom = messages[i++] === "1";
+                    this.arena.maze[y][x].left = messages[i++] === "1";
+                    this.arena.maze[y][x].right = messages[i++] === "1";
+                    x++;
+                    if(x % 15 === 0){
+                        y++;
+                        x = 0;
+                        console.log(y, x)
+                    }
+                }
+                this.arena.loaded = true;
+            }
+            if (message === "enemy-player-name") {
+                this.arena.player2.name = messages[i++];
             }
         }
     }

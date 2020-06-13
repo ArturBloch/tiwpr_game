@@ -29,7 +29,7 @@ function createSession(id = createId()) {
     }
 
     const session = new Session(id);
-
+    session.arena.generate();
     console.log("Creating session", session);
 
     sessions.set(id, session);
@@ -64,20 +64,30 @@ wss.on('connection', conn => {
                 console.log(session);
                 if(session.isFull()) {
                     value = "Session-is-full";
+                    client.send([{
+                        type: 'session-join-result',
+                        value: [value]
+                    }]);
                 } else {
                     value = sessionId;
+                    session.join(client);
+                    client.send([{
+                        type: 'session-join-result',
+                        value: [value]
+                    }]);
+                    sendMazeData(client, sessions.get(value));
+                    sendPlayerInformation(client, sessions.get(value));
+                    sendPlayerInformation(sessions.get(value).differentClient(client), sessions.get(value));
                 }
-                session.join(client);
-                client.send([{
-                    type: 'session-join-result',
-                    value: [value]
-                }]);
                 i++;
             } else if (message === 'welcome') {
                 if (clients.has(messages[i])) {
                     console.log("Welcome again " + messages[i])
                     client = clients.get(messages[i++]);
                     client.conn = conn;
+                    let clientSession = sessions.get(client.session.id);
+                    sendMazeData(client, clientSession)
+                    sendPlayerInformation(client, clientSession)
                 } else {
                     createNewUser(client);
                 }
@@ -121,6 +131,46 @@ wss.on('connection', conn => {
         }
     });
 });
+
+function sendPlayerInformation(client, session){
+    if(session !== null && client !== null){
+        let name;
+        if(session.client1.id === client.id){
+            if(session.client2 === null) return;
+            name = session.client2.name;
+        } else {
+            if(session.client1 === null) return;
+            name = session.client1.name;
+        }
+        console.log("sending name", name);
+        client.send([{
+            type: 'enemy-player-name',
+            value: [name]
+        }]);
+    }
+}
+
+function sendMazeData(client, session){
+    if(session !== null){
+        let mazeData = []
+        console.log(session)
+        for(let i = 0; i < session.arena.maze.length; i++) {
+            for(let j = 0; j < session.arena.maze[0].length; j++) {
+                let cell = session.arena.maze[i][j];
+                mazeData.push(cell.top ? 1 : 0);
+                mazeData.push(cell.bottom ? 1 : 0);
+                mazeData.push(cell.left ? 1 : 0);
+                mazeData.push(cell.right ? 1 : 0);
+            }
+        }
+        mazeData.push("END");
+        console.log("found his session");
+        client.send([{
+            type: 'maze-data',
+            value: mazeData
+        }]);
+    }
+}
 
 function createNewUser(client) {
     let clientId = createId();

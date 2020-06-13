@@ -54,7 +54,14 @@ class Session {
 
     sendUpdate() {
         this.timerUpdates()
-        this.currentPlayerUpdate()
+    }
+
+    differentClient(client) {
+        if(client.id === this.client1.id)
+            return this.client2;
+        if(client.id === this.client2.id)
+            return this.client1;
+        return null;
     }
 
     timerUpdates(){
@@ -70,21 +77,6 @@ class Session {
             this.client2.send([{
                 type: 'time-update',
                 value: [this.arena.timer]
-            }]);
-        }
-    }
-
-    currentPlayerUpdate() {
-        if (this.playerConnectionReady(this.client1)) {
-            this.client1.send([{
-                type: 'current-player',
-                value: [this.arena.playerTurn.id]
-            }]);
-        }
-        if (this.playerConnectionReady(this.client2)) {
-            this.client2.send([{
-                type: 'current-player',
-                value: [this.arena.playerTurn.id]
             }]);
         }
     }

@@ -1,11 +1,14 @@
 const Arena = require('./../common/arena');
 const performance = require('perf_hooks').performance;
 const WebSocket = require('ws');
+const {v4: uuidv4} = require('uuid');
 
 class Session {
     constructor(id) {
         this.id = id;
         this.arena = new Arena();
+        this.arena.player1.gameId = uuidv4();
+        this.arena.player2.gameId = uuidv4();
         this.client1 = null;
         this.client2 = null;
     }
@@ -19,11 +22,13 @@ class Session {
             if(this.client1 === null){
                 console.log("added client 1");
                 this.client1 = client;
+                this.arena.player1.client = client;
                 client.session = this;
                 return;
             } else if(this.client2 === null){
                 console.log("added client 2");
                 this.client2 = client;
+                this.arena.player2.client = client;
                 client.session = this;
                 console.log(this)
                 return;

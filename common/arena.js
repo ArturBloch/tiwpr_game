@@ -81,6 +81,29 @@ module.exports = class Arena {
         return neighbours[Math.floor(Math.random() * neighbours.length)] || null;
     }
 
+    playerNewName(gameId, newName){
+        if(this.player1.gameId === gameId){
+            this.player1.name = newName;
+        } else if(this.player2.gameId === gameId){
+            this.player2.name = newName;
+        }
+    }
+
+    newPlayerGameIds(player1GameId, player2GameId){
+        this.player1.gameId = player1GameId;
+        this.player2.gameId = player2GameId;
+    }
+
+    changePlayerStatus(playerGameId, playerReadyStatus){
+        console.log(playerGameId, playerReadyStatus)
+        if(this.player1.gameId === playerGameId){
+            this.player1.ready = playerReadyStatus === "1";
+            console.log(this.player1.ready)
+        } else if(this.player2.gameId === playerGameId){
+            this.player2.ready = playerReadyStatus === "1";
+        }
+    }
+
     removeWall(current, next) {
         if ((current.column === next.column) && (current.row === next.row + 1)) {/// top
             current.top = false;

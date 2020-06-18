@@ -21,9 +21,19 @@ connectionManager.connect('ws://localhost:3000/index');
 const rects = [];
 
 const sessionId = window.location.hash.split('#')[1];
+
 connectionManager.conn.onopen = function(){
     connectionManager.joinSession(sessionId);
+    connectionManager.getArenaInformation();
 }
+
+
+document.addEventListener('keydown', event => {
+   if(event.code === "KeyR"){
+       console.log("PRESSED THIS SHIT")
+       connectionManager.sendKeyPress("R");
+   }
+});
 
 function getTextWidth(text) {
     context.font = getFont();
@@ -77,6 +87,8 @@ function createRectangleArray(id) {
     console.table(rects);
 }
 
+
+
 function drawMaze(player){
     let displacementX = cellSize * 2 + player * cellSize * 20;
     let displacementY = cellSize * 2;
@@ -109,59 +121,10 @@ function drawMaze(player){
                     context.stroke();
                 }
             }
-            // context.beginPath();
-            // context.lineWidth = 2;
-            // if (mouseX > deltaX + x * cellSize && mouseX < deltaX + x * cellSize + cellSize && mouseY > deltaY + y * cellSize && mouseY < deltaY + y * cellSize + cellSize) {
-            //     highlightSquareX = deltaX + x * cellSize;
-            //     highlightSquareY = deltaY + y * cellSize;
-            // }
-            // context.strokeStyle = 'green';
-            // context.strokeRect(deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-            // context.closePath();
         }
     }
 }
 
-
-// function drawGrid({id}) {
-//     let highlightSquareY = -1;
-//     let highlightSquareX = -1;
-//
-//     cellSize = Math.floor(canvas.width / 30);
-//     boardWidth = 6 * cellSize;
-//     let distance = canvas.width - 6 * cellSize - boardWidth * 2;
-//     let deltaX = (id - 1) * distance + cellSize * 6;
-//     let deltaY = 5 * cellSize;
-//     for (let i = 0; i < 36; i++) {
-//         let x = Math.floor(i % 6);
-//         let y = Math.floor(i / 6);
-//         let square = y * 6 + x;
-//         if (square === 0) {
-//             context.drawImage(spriteSheet, 0, 0, 128, 128, deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-//         } else if (square === 5) {
-//             context.drawImage(spriteSheet, 256, 0, 128, 128, deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-//         } else if (square === 30) {
-//             context.drawImage(spriteSheet, 0, 256, 128, 128, deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-//         } else if (square === 35) {
-//             context.drawImage(spriteSheet, 256, 256, 128, 128, deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-//         } else if (y === 0) {
-//             context.drawImage(spriteSheet, 128, 0, 128, 128, deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-//         } else if (x === 0) {
-//             context.drawImage(spriteSheet, 0, 128, 128, 128, deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-//         } else if (x === 5) {
-//             context.drawImage(spriteSheet, 256, 128, 128, 128, deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-//         } else if (y === 5) {
-//             context.drawImage(spriteSheet, 128, 256, 128, 128, deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-//         } else {
-//             let pickOne = Math.floor(Math.random() * 2);
-//             if (pickOne === 0) {
-//                 context.drawImage(spriteSheet, 128, 128, 128, 128, deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-//             } else if (pickOne === 1) {
-//                 context.drawImage(spriteSheet, 384, 256, 128, 128, deltaX + x * cellSize, deltaY + y * cellSize, cellSize, cellSize);
-//             }
-//         }
-//     }
-// }
 
 window.addEventListener('resize', resizeCanvas, false);
 
@@ -170,7 +133,6 @@ function resizeCanvas() {
     canvas.height = window.innerHeight;
     cellSize = calculateCellSize();
     boardWidth = cellSize * 15;
-    // createRectangleArray(1);
     drawBoard();
     print(arena.player1);
     print(arena.player2);
@@ -183,17 +145,10 @@ function print(player) {
     context.fillStyle = "WHITE";
     context.fillText(player.timer + " ms", displacementX, displacementY - cellSize);
     context.fillText(player.name, displacementX, boardWidth + displacementY);
-    // let seconds = time;
-    // context.fillStyle = "RED";
-    // context.fillText(seconds, deltaX, getFontSize() * 2);
-    // context.fillStyle = "WHITE";
-    // context.fillText("seconds left", deltaX + getTextWidth(seconds) + getSizeRatio() * 10, getFontSize() * 2);
-    //
-    // deltaX = (enemy.id - 1) * distance + cellSize * 6;
-    // context.font = getFont();
-    // context.fillStyle = "WHITE";
-    // context.fillText(enemy.name, deltaX, deltaY);
-    // context.fillText("gold: " + enemy.gold, deltaX + cellSize * 4, deltaY);
+    if(!player.ready){
+        context.fillStyle = "RED";
+        context.fillText("Press R to make yourself ready", displacementX, displacementY + boardWidth / 2);
+    }
 }
 
 function update() {

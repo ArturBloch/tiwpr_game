@@ -46,6 +46,13 @@ module.exports = class ConnectionManager {
         }]);
     }
 
+    getArenaInformation(){
+        this.send([{
+            type: 'need-arena-info',
+            value: []
+        }]);
+    }
+
     send(data) {
         let finalMSG = "";
         for (let i = 0; i < data.length; i++) {
@@ -121,8 +128,14 @@ module.exports = class ConnectionManager {
                 }
                 this.arena.loaded = true;
             }
-            if (message === "enemy-player-name") {
-                this.arena.player2.name = messages[i++];
+            if (message === "playerGameId-newName") {
+                this.arena.playerNewName(messages[i++], messages[i++]);
+            }
+            if(message === "player-game-ids"){
+                this.arena.newPlayerGameIds(messages[i++], messages[i++]);
+            }
+            if(message === "changed-ready-status"){
+                this.arena.changePlayerStatus(messages[i++], messages[i++]);
             }
         }
     }
@@ -154,6 +167,13 @@ module.exports = class ConnectionManager {
         this.send([{
             type: 'change-name',
             value: [newName]
+        }]);
+    }
+
+    sendKeyPress(key){
+        this.send([{
+            type: 'key-pressed',
+            value: [key]
         }]);
     }
 }

@@ -115,10 +115,10 @@ module.exports = class ConnectionManager {
                 let y = 0;
                 let x = 0;
                 while(messages[i] !== "END"){
-                    this.arena.maze[y][x].top = messages[i++] === "1";
-                    this.arena.maze[y][x].bottom = messages[i++] === "1";
-                    this.arena.maze[y][x].left = messages[i++] === "1";
-                    this.arena.maze[y][x].right = messages[i++] === "1";
+                    this.arena.maze[y][x].topWall = messages[i++] === "1";
+                    this.arena.maze[y][x].bottomWall = messages[i++] === "1";
+                    this.arena.maze[y][x].leftWall = messages[i++] === "1";
+                    this.arena.maze[y][x].rightWall = messages[i++] === "1";
                     x++;
                     if(x % 15 === 0){
                         y++;
@@ -136,6 +136,23 @@ module.exports = class ConnectionManager {
             }
             if(message === "changed-ready-status"){
                 this.arena.changePlayerStatus(messages[i++], messages[i++]);
+            }
+            if(message === "countdown-update"){
+                this.arena.setCountdownTimer(messages[i++], performance.now());
+            }
+            if(message === "maze-start-exit"){
+                let startingX = messages[i++];
+                let startingY = messages[i++];
+                let endingX = messages[i++];
+                let endingY = messages[i++];
+                this.arena.setStart(startingX, startingY);
+                this.arena.setExit(endingX, endingY);
+            }
+            if(message === "player-position"){
+                let gameId = messages[i++];
+                let positionX = messages[i++];
+                let positionY = messages[i++];
+                this.arena.setPlayerPosition(gameId, positionX, positionY);
             }
         }
     }

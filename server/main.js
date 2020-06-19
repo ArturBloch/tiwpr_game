@@ -137,30 +137,13 @@ function handleKeyPress(client, keyPressed) {
             if (session.arena.player1.client !== null && client.id === session.arena.player1.client.id) {
                 session.arena.player1.ready = true;
                 let playerGameId = session.arena.player1.gameId;
-                sendMsgToClients(session, "changed-ready-status", [playerGameId, 1]);
+                session.sendMsgToClients("changed-ready-status", [playerGameId, 1]);
             } else if (session.arena.player2.client !== null && client.id === session.arena.player2.client.id) {
                 session.arena.player2.ready = true;
                 let playerGameId = session.arena.player2.gameId;
-                sendMsgToClients(session, "changed-ready-status", [playerGameId, 1]);
+                session.sendMsgToClients("changed-ready-status", [playerGameId, 1]);
             }
         }
-    }
-}
-
-function sendMsgToClients(session, msg, data) {
-    console.log("sending msg hehe to clients hehe ");
-    if (session.client1 !== null) {
-        console.log("sending msg to client 1");
-        session.client1.send([{
-            type: msg,
-            value: data
-        }]);
-    }
-    if (session.client2 !== null) {
-        session.client2.send([{
-            type: msg,
-            value: data
-        }]);
     }
 }
 
@@ -219,10 +202,10 @@ function sendMazeData(client) {
     for (let i = 0; i < session.arena.maze.length; i++) {
         for (let j = 0; j < session.arena.maze[0].length; j++) {
             let cell = session.arena.maze[i][j];
-            mazeData.push(cell.top ? 1 : 0);
-            mazeData.push(cell.bottom ? 1 : 0);
-            mazeData.push(cell.left ? 1 : 0);
-            mazeData.push(cell.right ? 1 : 0);
+            mazeData.push(cell.topWall ? 1 : 0);
+            mazeData.push(cell.bottomWall ? 1 : 0);
+            mazeData.push(cell.leftWall ? 1 : 0);
+            mazeData.push(cell.rightWall ? 1 : 0);
         }
     }
     mazeData.push("END");
@@ -245,10 +228,8 @@ function createNewUser(client) {
 function updateClients() {
     setInterval(function () {
         sessions.forEach(function (session) {
-            if (session.sessionId !== null) {
-                session.update();
-                session.sendUpdate();
-            }
+            session.update();
+            session.sendUpdate();
         });
         // sessions.forEach(function (session) {
         //     session.update();

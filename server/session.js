@@ -55,11 +55,37 @@ class Session {
 
     update() {
         this.arena.update(performance.now());
+        if(this.arena.playersReady() && !this.arena.countdownStarted()){
+            this.arena.startCountDownTimer(performance.now());
+        }
+        if(this.arena.countdownTimer < 0){
+            this.arena.gameStarted = true;
+        }
     }
 
     sendUpdate() {
-        this.timerUpdates()
+        if(this.arena.countdownTimer > 0 && this.arena.playersReady()){
+            this.sendCountDownTimers();
+        }
+        if(this.arena.countdownTimer < 0.6 && !this.arena.gameStarted && this.arena.countdownStarted()) {
+            this.sendMsgToClients("maze-start-exit", [this.arena.startZone.column, this.arena.startZone.row, this.arena.exitZone.column, this.arena.exitZone.row]);
+            this.sendMsgToClients("player-position", [this.arena.player1.gameId, this.arena.player1.position.column, this.arena.player1.position.row]);
+            this.sendMsgToClients("player-position", [this.arena.player2.gameId, this.arena.player2.position.column, this.arena.player2.position.row]);
+        }
     }
+
+    sendCountDownTimers(){
+        this.client1.send([{
+            type: 'countdown-update',
+            value: [this.arena.countdownTimer]
+        }]);
+        this.arena.countdownTimerUpdate(performance.now());
+        this.client2.send([{
+            type: 'countdown-update',
+            value: [this.arena.countdownTimer]
+        }]);
+    }
+
 
     differentClient(client) {
         if(client.id === this.client1.id)
@@ -97,6 +123,23 @@ class Session {
             return true;
         }
         return false;
+    }
+
+    sendMsgToClients(msg, data) {
+        console.log("sending msg hehe to clients hehe ");
+        if (this.client1 !== null) {
+            console.log("sending msg to client 1");
+            this.client1.send([{
+                type: msg,
+                value: data
+            }]);
+        }
+        if (this.client2 !== null) {
+            this.client2.send([{
+                type: msg,
+                value: data
+            }]);
+        }
     }
 }
 

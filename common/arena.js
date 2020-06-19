@@ -7,6 +7,8 @@ module.exports = class Arena {
         this.width = this.length;
         this.height = this.length;
         this.maze = [];
+        this.exitZone = null;
+        this.startZone = null;
         for (let i = 0; i < this.length; i++) {
             this.maze[i] = [];
             for (let j = 0; j < this.length; j++) {
@@ -14,54 +16,131 @@ module.exports = class Arena {
             }
         }
         this.timer = 5;
-        this.prevTime = 0;
-        this.player1 = new Player({id: 1, name: ""});
-        this.player2 = new Player({id: 2, name: ""});
+        this.countdownTimer = 0;
+        this.appTime = 0;
+        this.player1 = new Player({id: 0, name: ""});
+        this.player2 = new Player({id: 1, name: ""});
         this.paused = true;
         this.loaded = false;
+        this.gameStarted = false;
     }
 
     start() {
 
     }
 
+    countdownTimerUpdate(nowTime){
+        this.countdownTimer = (this.countdownTimer - (nowTime - this.appTime) / 1000);
+        this.appTime = nowTime;
+    }
+
     update(nowTime) {
-        if (!this.paused) {
-            this.timer = (this.timer - (nowTime - this.prevTime) / 1000);
-            if (this.timer < 0) {
-                console.log("timer = ", this.timer);
-                this.timer += 5;
-                this.switchPlayer();
-            }
-            this.prevTime = nowTime;
+        if(this.countdownTimer < 0) {
+            this.gameStarted = true;
+        }
+        if(this.countdownStarted()) this.countdownTimerUpdate(nowTime);
+    }
+
+    setAppTime(newTime){
+        this.appTime = newTime;
+    }
+
+    setCountdownTimer(newCountdownTime, newAppTime){
+        this.countdownTimer = newCountdownTime;
+        this.appTime = newAppTime;
+    }
+
+    setTime(newTime, appTime) {
+        this.timer = newTime;
+        this.appTime = appTime;
+    }
+
+    playersReady(){
+        return this.player1.ready && this.player2.ready;
+    }
+
+    startCountDownTimer(startAppTime){
+        this.countdownTimer = 5;
+        this.setAppTime(startAppTime);
+    }
+
+    countdownStarted(){
+        return this.countdownTimer !== 0;
+    }
+
+    setStart(startingX, startingY){
+        this.startZone = this.maze[startingY][startingX];
+    }
+
+    setExit(endingX, endingY){
+        this.exitZone = this.maze[endingY][endingX];
+    }
+
+    setPlayerPosition(gameId, positionX, positionY){
+        console.log(gameId, positionX, positionY)
+        if(this.player1.gameId === gameId){
+            console.log("player 1")
+            this.player1.position = this.maze[positionY][positionX];
+        }
+        if(this.player2.gameId === gameId){
+            console.log("player 2")
+            this.player2.position = this.maze[positionY][positionX];
         }
     }
 
-    setTime(newTime, prevTime) {
-        this.timer = newTime;
-        this.prevTime = prevTime;
+    movePlayer(player, direction){
+        console.log("MOVE FROM ", player.position, " IN " , direction)
+        if(this.isMoveAllowed(player.position, direction)){
+            let lastPosition = player.position;
+            switch(direction){
+                case "UP":
+                    player.position = this.maze[lastPosition.row - 1][lastPosition.column];
+                    break;
+                case "DOWN":
+                    player.position = this.maze[lastPosition.row + 1][lastPosition.column];
+                    break;
+                case "LEFT":
+                    player.position = this.maze[lastPosition.row][lastPosition.column - 1];
+                    break;
+                case "RIGHT":
+                    player.position = this.maze[lastPosition.row][lastPosition.column + 1];
+                    break;
+            }
+        }
     }
 
     generate() {
-        let current = this.maze[0][0];
+        let randomStartY = Math.floor(Math.random() * this.height);
+        let randomStartX = Math.floor(Math.random() * this.width);
+        this.startZone = this.maze[randomStartY][randomStartX];
+        console.log(this.startZone)
+        let current = this.startZone;
         let stack = [];
         current.visited = true;
         stack.push(current);
+        let counter = 0;
         do {
             let next = this.getUnvisitedNeighbour(this.maze, current);
-            console.log("next now", next)
+            counter++;
             if (next != null) {
                 this.removeWall(current, next);
                 stack.push(current);
                 current = next;
                 current.visited = true;
-                console.log("stack now", current)
             } else {
                 current = stack.pop();
+                if(counter > 10 && this.exitZone === null){
+                    this.exitZone = this.maze[current.row][current.column];
+                }
             }
         }
         while (stack.length !== 0);
-        console.log(this.maze)
+        this.player1.position = this.startZone;
+        this.player2.position = this.startZone;
+    }
+
+    manhattanDistance(startX, startY, endX, endY){
+        return Math.abs((startX - endX) + (startY - endY));
     }
 
     getUnvisitedNeighbours(cells, {column, row}) {
@@ -69,7 +148,6 @@ module.exports = class Arena {
         const previousRow = row > 0 ? cells[row - 1][column] : null;
         const nextColumn = column < cells[column].length - 1 ? cells[row][column + 1] : null;
         const nextRow = row < cells.length - 1 ? cells[row + 1][column] : null;
-        console.log(previousColumn, previousRow, nextColumn, nextRow)
         return [previousColumn, previousRow, nextColumn, nextRow]
             .filter(Boolean)
             .filter(cell => cell.visited === false);
@@ -77,7 +155,6 @@ module.exports = class Arena {
 
     getUnvisitedNeighbour(cells, cell) {
         const neighbours = this.getUnvisitedNeighbours(cells, cell);
-        console.log(neighbours)
         return neighbours[Math.floor(Math.random() * neighbours.length)] || null;
     }
 
@@ -95,31 +172,44 @@ module.exports = class Arena {
     }
 
     changePlayerStatus(playerGameId, playerReadyStatus){
-        console.log(playerGameId, playerReadyStatus)
         if(this.player1.gameId === playerGameId){
             this.player1.ready = playerReadyStatus === "1";
-            console.log(this.player1.ready)
         } else if(this.player2.gameId === playerGameId){
             this.player2.ready = playerReadyStatus === "1";
         }
     }
 
     removeWall(current, next) {
-        if ((current.column === next.column) && (current.row === next.row + 1)) {/// top
-            current.top = false;
-            next.bottom = false;
+        if ((current.column === next.column) && (current.row === next.row + 1)) {/// topWall
+            current.topWall = false;
+            next.bottomWall = false;
         }
-        if (current.column === next.column && (current.row === next.row - 1)) {///bottom
-            current.bottom = false;
-            next.top = false;
+        if (current.column === next.column && (current.row === next.row - 1)) {///bottomWall
+            current.bottomWall = false;
+            next.topWall = false;
         }
-        if ((current.column === next.column - 1) && current.row === next.row) {///right
-            current.right = false;
-            next.left = false;
+        if ((current.column === next.column - 1) && current.row === next.row) {///rightWall
+            current.rightWall = false;
+            next.leftWall = false;
         }
-        if ((current.column === next.column + 1) && current.row === next.row) {///left
-            current.left = false;
-            next.right = false;
+        if ((current.column === next.column + 1) && current.row === next.row) {///leftWall
+            current.leftWall = false;
+            next.rightWall = false;
+        }
+    }
+
+    isMoveAllowed(cell, direction){
+        if(direction === "UP"){
+            console.log("UP")
+            return !cell.topWall;
+        } else if(direction === "DOWN"){
+            console.log("DOWN UU")
+            return !cell.bottomWall;
+        } else if(direction === "LEFT"){
+            console.log("LEFT")
+            return !cell.leftWall;
+        } else if(direction === "RIGHT") {
+            return !cell.rightWall;
         }
     }
 }

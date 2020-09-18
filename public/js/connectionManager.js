@@ -113,6 +113,10 @@ module.exports = class ConnectionManager {
             }
             if (message === "session-join-result") {
                 let response = messages[i++];
+                if(window.location.hash === ''){
+                    console.log("RESPONSE " + response);
+                    window.location.hash = response;
+                }
                 this.events.emit('join-session-response', response);
             }
             if (message === "maze-data") {
@@ -168,6 +172,11 @@ module.exports = class ConnectionManager {
                 let gameId = messages[i++];
                 let mazeTimer = messages[i++];
                 this.arena.setPlayerFinalMazeTimer(gameId, mazeTimer);
+            }
+            if(message === "game-finished"){
+                const winner = messages[i++];
+                console.log("msg winner " + winner);
+                this.arena.setWinner(winner);
             }
             if(message === "pong"){
                 this.isAlive = true;

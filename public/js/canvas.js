@@ -12,43 +12,42 @@ const spriteSheet = new Image();
 let myself = arena.player1;
 let enemy = arena.player2;
 let resized = true;
-
 const fontSize = 50;
 const fontBase = 1920;
 
 connectionManager.connect('ws://localhost:3000/index');
 
-const rects = [];
-
 const sessionId = window.location.hash.split('#')[1];
 
-connectionManager.conn.onopen = function(){
+connectionManager.conn.onopen = function () {
     connectionManager.joinSession(sessionId);
     connectionManager.getArenaInformation();
 }
 
 document.addEventListener('keydown', event => {
-    if(event.code === "KeyR"){
+    if (event.code === "KeyR") {
         connectionManager.sendKeyPress("R");
     }
-    if(event.code === "KeyW" || event.code === "ArrowUp"){
-        if(arena.movePlayer(myself, "UP")){
-            connectionManager.sendMoveAction("UP");
+    if (!myself.finished) {
+        if (event.code === "KeyW" || event.code === "ArrowUp") {
+            if (arena.movePlayer(myself, "UP")) {
+                connectionManager.sendMoveAction("UP");
+            }
         }
-    }
-    if(event.code === "KeyA" || event.code === "ArrowLeft"){
-        if(arena.movePlayer(myself, "LEFT")){
-            connectionManager.sendMoveAction("LEFT");
+        if (event.code === "KeyA" || event.code === "ArrowLeft") {
+            if (arena.movePlayer(myself, "LEFT")) {
+                connectionManager.sendMoveAction("LEFT");
+            }
         }
-    }
-    if(event.code === "KeyD" || event.code === "ArrowRight"){
-        if(arena.movePlayer(myself,"RIGHT")){
-            connectionManager.sendMoveAction("RIGHT");
+        if (event.code === "KeyD" || event.code === "ArrowRight") {
+            if (arena.movePlayer(myself, "RIGHT")) {
+                connectionManager.sendMoveAction("RIGHT");
+            }
         }
-    }
-    if(event.code === "KeyS" || event.code === "ArrowDown"){
-        if(arena.movePlayer(myself,"DOWN")){
-            connectionManager.sendMoveAction("DOWN");
+        if (event.code === "KeyS" || event.code === "ArrowDown") {
+            if (arena.movePlayer(myself, "DOWN")) {
+                connectionManager.sendMoveAction("DOWN");
+            }
         }
     }
 });
@@ -57,6 +56,10 @@ function getTextWidth(text) {
     context.font = getFont();
     const metrics = context.measureText(text);
     return metrics.width;
+}
+
+function getLineHeight() {
+    return context.measureText("M").width * 1.2;
 }
 
 function getFontSize() {
@@ -68,47 +71,26 @@ function getFont() {
     return (getFontSize() | 0) + 'px ARIAL'; // set font
 }
 
-function getSizeRatio() {
-    return canvas.width / 1920;
-}
-
 function loadSprites() {
     spriteSheet.src = 'res/tiwpr.png';
     spriteSheet.onload = function () {
     }
 }
 
-function calculateCellSize(){
+function calculateCellSize() {
     return Math.floor(canvas.width / 40);
 }
 
-function createRectangleArray(id) {
-    cellSize = calculateCellSize();
-    boardWidth = 6 * cellSize;
-    let distance = canvas.width - 6 * cellSize - boardWidth * 2;
-    let deltaX = (id - 1) * distance + cellSize * 6;
-    let deltaY = 5 * cellSize;
-    for (let i = 0; i < 36; i++) {
-        let x = Math.floor(i % 6);
-        let y = Math.floor(i / 6);
-        rects[i] = {
-            x: deltaX + x * cellSize,
-            y: deltaY + y * cellSize,
-            size: cellSize
-        }
-    }
-}
-
-function drawMaze(player){
+function drawMaze(player) {
     let displacementX = cellSize * 2 + player.id * cellSize * 20;
     let displacementY = cellSize * 2;
-    if(arena.gameStarted && arena.countdownTimer < 0 && player.position !== null){
+    if (arena.gameStarted && arena.countdownTimer < 0 && player.position !== null) {
         context.fillStyle = "#404040";
         context.fillRect(displacementX + cellSize * arena.startZone.column, displacementY + cellSize * arena.startZone.row, cellSize, cellSize);
         context.fillStyle = "#72923F";
         context.fillRect(displacementX + cellSize * arena.exitZone.column, displacementY + cellSize * arena.exitZone.row, cellSize, cellSize);
         context.beginPath();
-        context.arc(displacementX + cellSize * player.position.column + cellSize/ 2, displacementY + cellSize * player.position.row + cellSize/ 2, cellSize / 4, 0, 2 * Math.PI, false);
+        context.arc(displacementX + cellSize * player.position.column + cellSize / 2, displacementY + cellSize * player.position.row + cellSize / 2, cellSize / 4, 0, 2 * Math.PI, false);
         context.fillStyle = "#D68840";
         context.strokeStyle = "#72923F"
         context.fill();
@@ -118,7 +100,7 @@ function drawMaze(player){
     for (let row = 0; row < arena.height; row++) {
         for (let col = 0; col < arena.height; col++) {
             context.strokeStyle = 'rgb(255, 255, 255)';
-            if(arena.loaded) {
+            if (arena.loaded) {
                 if (arena.maze[row][col].topWall) {
                     context.beginPath();
                     context.moveTo(displacementX + cellSize * col, displacementY + cellSize * row);
@@ -160,16 +142,33 @@ function resizeCanvas() {
     drawBoard();
     print(arena.player1);
     print(arena.player2);
+    printGeneral();
 }
 
 
 let getReadyMessagePosition;
 let countdownTimerPosition;
+
+function printGeneral() {
+    if (arena.gameFinished) {
+        let finishedMessage = "";
+        context.fillStyle = "RED";
+        if (arena.winner == null) {
+            finishedMessage = "The game ended in a draw! \nThere is no winner";
+            context.fillText(finishedMessage, (canvas.width - getTextWidth(finishedMessage)) / 2, ((canvas.height) / 2));
+        } else {
+            let finishedMessage = "The winner of this game is : ";
+            context.fillText(finishedMessage + arena.winner.name, (canvas.width - getTextWidth(finishedMessage)) / 2, ((canvas.height) / 2));
+            context.fillText("with time : " + parseFloat(arena.winner.mazeTimer).toFixed(2) + "s", (canvas.width - getTextWidth(finishedMessage)) / 2, ((canvas.height) / 2) + getLineHeight());
+        }
+    }
+}
+
 function print(player) {
-    let displacementX = cellSize * 2 + player.id  * cellSize * 20;
+    let displacementX = cellSize * 2 + player.id * cellSize * 20;
     let displacementY = cellSize * 3;
     context.font = getFont();
-    if(player.finished) {
+    if (player.finished) {
         context.fillStyle = "GREEN";
     } else {
         context.fillStyle = "WHITE";
@@ -178,14 +177,14 @@ function print(player) {
     context.fillText(mazeTimerMessage, displacementX, displacementY - cellSize);
     context.fillText(player.name, displacementX, boardWidth + displacementY);
     let getReadyMessage = "Press R to make yourself ready";
-    if(resized) getReadyMessagePosition = (boardWidth - getTextWidth(getReadyMessage))/2;
-    if(!player.ready){
+    if (resized) getReadyMessagePosition = (boardWidth - getTextWidth(getReadyMessage)) / 2;
+    if (!player.ready) {
         context.fillStyle = "RED";
         context.fillText(getReadyMessage, getReadyMessagePosition + displacementX, displacementY + boardWidth / 2);
     }
     let countdownMessage = "GET READY! " + parseFloat(arena.countdownTimer).toFixed(2) + "s";
-    if(resized) countdownTimerPosition = cellSize * 2 + (boardWidth - getTextWidth(countdownMessage))/2;
-    if(arena.countdownTimer > 0){
+    if (resized) countdownTimerPosition = cellSize * 2 + (boardWidth - getTextWidth(countdownMessage)) / 2;
+    if (arena.countdownTimer > 0) {
         context.fillStyle = "RED";
         context.fillText(countdownMessage, countdownTimerPosition, displacementY + boardWidth / 2);
     }
@@ -194,19 +193,20 @@ function print(player) {
 function update() {
     setInterval(function () {
         arena.update(performance.now());
-        if(arena.playersReady() && !arena.countdownStarted()){
+        if (arena.playersReady() && !arena.countdownStarted()) {
             arena.startCountDownTimer(performance.now())
         }
         drawBoard()
         print(arena.player1);
         print(arena.player2);
-        if(resized) resized = false;
+        printGeneral();
+        if (resized) resized = false;
     }, 10);
 }
 
 function heartbeat() {
     setInterval(function () {
-            connectionManager.heartbeat();
+        connectionManager.heartbeat();
     }, 30000);
 }
 

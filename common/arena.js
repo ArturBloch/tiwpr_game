@@ -22,6 +22,8 @@ module.exports = class Arena {
         this.player2 = new Player({id: 1, name: ""});
         this.loaded = false;
         this.gameStarted = false;
+        this.gameFinished = false;
+        this.winner = null;
     }
 
     start() {
@@ -132,6 +134,23 @@ module.exports = class Arena {
             }
         }
         return false;
+    }
+
+    getWinner(){
+        if(this.player1.mazeTimer > this.player2.mazeTimer) return this.player2;
+        if(this.player2.mazeTimer > this.player1.mazeTimer) return this.player1;
+        return null;
+    }
+
+    setWinner(resultId){
+        this.gameFinished = true;
+        if(this.player1.gameId === resultId){
+            this.winner = this.player1;
+            console.log("Set player1 as winner");
+        } else if(this.player2.gameId === resultId){
+            this.winner = this.player2;
+            console.log("Set player2 as winner");
+        }
     }
 
     generate() {

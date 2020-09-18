@@ -11,48 +11,17 @@ const server = app.listen(3000, function () {
     console.log('My server is running on port 3000');
 });
 
-// app.use(express.static('public'));
 app.use(express.static(path.join(__dirname, '../public')));
 app.get("*", (req, res) => {
     res.sendFile(path.resolve(__dirname, "../public/index.html"));
 });
 
-// app.use(function(req, res, next) {
-//     console.log("request", req.originalUrl);
-//     const removeOnRoutes = '/tiwpr_gameServer/public';
-//     req.originalUrl = req.originalUrl.replace(removeOnRoutes,'');
-//     req.path = req.path.replace(removeOnRoutes,'');
-//     return next();
-// });
-
 const wss = new WebSocket.Server({server});
 const sessions = new Map;
 const clients = new Map;
 
-function createId() {
-    return uuidv4();
-}
-
-function createClient(conn, id = createId()) {
-    return new Client(conn, id);
-}
-
-function createSession(id = createId()) {
-    if (sessions.has(id)) {
-        throw new Error("Session already exists");
-    }
-    const session = new Session(id);
-    session.arena.generate();
-    console.log("Creating session", session);
-
-    sessions.set(id, session);
-
-    return session;
-}
-
-function getSession(id) {
-    return sessions.get(id);
-}
+updateClients();
+heartbeat();
 
 wss.on('connection', conn => {
     conn.isAlive = true;
@@ -70,12 +39,7 @@ wss.on('connection', conn => {
             const message = messages[i++];
             client.timeOfLastMessage = performance.now();
             if (message === 'create-session') {
-                const session = createSession();
-                // session.join(client);
-                // client.send([{
-                //     type: 'session-created',
-                //     value: [session.id]
-                // }]);
+                createSession();
             } else if (message === 'join-session') {
                 const sessionId = messages[i++];
                 const session = getSession(sessionId) || createSession(sessionId);
@@ -87,7 +51,7 @@ wss.on('connection', conn => {
                         value: [value]
                     }]);
                 } else {
-                    value = sessionId;
+                    value = session.id;
                     session.join(client);
                     client.send([{
                         type: 'session-join-result',
@@ -147,15 +111,35 @@ wss.on('connection', conn => {
         if (session) {
             try {
                 session.leave(client);
-                // if (session.clients.size === 0) {
-                //     sessions.delete(session.id);
-                // }
             } catch (e) {
                 console.error(e.message);
             }
         }
     });
 });
+
+function createId() {
+    return uuidv4();
+}
+
+function createClient(conn, id = createId()) {
+    return new Client(conn, id);
+}
+
+function createSession(id = createId()) {
+    if (sessions.has(id)) {
+        throw new Error("Session already exists");
+    }
+    const session = new Session(id);
+    session.arena.generate();
+    console.log("Creating session", session);
+    sessions.set(id, session);
+    return session;
+}
+
+function getSession(id) {
+    return sessions.get(id);
+}
 
 function handleKeyPress(client, keyPressed) {
     let session = sessions.get(client.session.id);
@@ -275,9 +259,15 @@ function sendNewPlayerPosition(toClient, gameId, position) {
 
 function updateClients() {
     setInterval(function () {
-        sessions.forEach(function (session) {
+        sessions.forEach((session, sessionId, sessions) => {
             session.update();
-            session.sendUpdate();
+            let end = session.sendUpdate();
+            if (end) {
+                console.log("Removing " + sessionId);
+                session.client1.session = null;
+                session.client2.session = null;
+                sessions.delete(sessionId);
+            }
         });
 
     }, 500);
@@ -299,6 +289,3 @@ function heartbeat() {
         }
     }, 30000);
 }
-
-updateClients();
-heartbeat();

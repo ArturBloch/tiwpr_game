@@ -13,6 +13,7 @@ class Session {
         this.client2 = null;
         this.player1Finished = false;
         this.player2Finished = false;
+        this.gameFinished = false;
     }
 
     join(client) {
@@ -73,7 +74,22 @@ class Session {
             this.sendMsgToClients("player-position", [this.arena.player2.gameId, this.arena.player2.position.column, this.arena.player2.position.row]);
         }
         this.checkIfPlayerFinished();
+        return this.checkIfGameFinished();
     }
+
+    checkIfGameFinished(){
+        if(this.player1Finished && this.player2Finished && !this.gameFinished){
+            const winningPlayer = this.arena.getWinner();
+            this.gameFinished = true;
+            if(winningPlayer == null) {
+                this.sendMsgToClients("game-finished", ["draw"])
+            } else {
+                this.sendMsgToClients("game-finished", [winningPlayer.gameId])
+            }
+            return true;
+        }
+    }
+
 
     checkIfPlayerFinished(){
         if(this.arena.player1.finished && !this.player1Finished){
@@ -127,8 +143,7 @@ class Session {
     }
 
     isFull(){
-        const isFull = this.client1 !== null && this.client2 !== null;
-        return isFull;
+        return this.client1 !== null && this.client2 !== null;
     }
 
     playerConnectionReady(client){

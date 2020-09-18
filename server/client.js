@@ -8,6 +8,8 @@ module.exports = class Client {
         this.id = id;
         this.events = new Events();
         this.name = null;
+        this.pingTime = 0;
+        this.timeOfLastMessage = 0;
     }
 
     send(data) {

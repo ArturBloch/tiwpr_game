@@ -20,7 +20,6 @@ module.exports = class Arena {
         this.appTime = 0;
         this.player1 = new Player({id: 0, name: ""});
         this.player2 = new Player({id: 1, name: ""});
-        this.paused = true;
         this.loaded = false;
         this.gameStarted = false;
     }
@@ -31,7 +30,6 @@ module.exports = class Arena {
 
     countdownTimerUpdate(nowTime){
         this.countdownTimer = (this.countdownTimer - (nowTime - this.appTime) / 1000);
-        this.appTime = nowTime;
     }
 
     update(nowTime) {
@@ -39,10 +37,24 @@ module.exports = class Arena {
             this.gameStarted = true;
         }
         if(this.countdownStarted()) this.countdownTimerUpdate(nowTime);
+        if(this.gameStarted) this.updateMazeTimers(nowTime);
+        this.checkPlayerFinish();
+        this.setAppTime(nowTime);
     }
 
     setAppTime(newTime){
         this.appTime = newTime;
+    }
+
+    checkPlayerFinish() {
+        if (this.exitZone !== null) {
+            if (!this.player1.finished && this.player1.position !== null && this.player1.position.isSame(this.exitZone)) {
+                this.player1.finished = true;
+            }
+            if (!this.player2.finished && this.player2.position !== null && this.player2.position.isSame(this.exitZone)) {
+                this.player2.finished = true;
+            }
+        }
     }
 
     setCountdownTimer(newCountdownTime, newAppTime){
@@ -64,6 +76,11 @@ module.exports = class Arena {
         this.setAppTime(startAppTime);
     }
 
+    updateMazeTimers(nowTime){
+        if(!this.player1.finished) this.player1.mazeTimer = (this.player1.mazeTimer + (nowTime - this.appTime) / 1000);
+        if(!this.player2.finished) this.player2.mazeTimer = (this.player2.mazeTimer + (nowTime - this.appTime) / 1000);
+    }
+
     countdownStarted(){
         return this.countdownTimer !== 0;
     }
@@ -76,44 +93,51 @@ module.exports = class Arena {
         this.exitZone = this.maze[endingY][endingX];
     }
 
-    setPlayerPosition(gameId, positionX, positionY){
-        console.log(gameId, positionX, positionY)
+    setPlayerFinalMazeTimer(gameId, mazeTimer){
         if(this.player1.gameId === gameId){
-            console.log("player 1")
+            this.player1.mazeTimer = mazeTimer;
+            this.player1.finished = true;
+        }
+        if(this.player2.gameId === gameId){
+            this.player2.mazeTimer = mazeTimer;
+            this.player2.finished = true;
+        }
+    }
+
+    setPlayerPosition(gameId, positionX, positionY){
+        if(this.player1.gameId === gameId){
             this.player1.position = this.maze[positionY][positionX];
         }
         if(this.player2.gameId === gameId){
-            console.log("player 2")
             this.player2.position = this.maze[positionY][positionX];
         }
     }
 
     movePlayer(player, direction){
-        console.log("MOVE FROM ", player.position, " IN " , direction)
         if(this.isMoveAllowed(player.position, direction)){
             let lastPosition = player.position;
             switch(direction){
                 case "UP":
                     player.position = this.maze[lastPosition.row - 1][lastPosition.column];
-                    break;
+                    return true;
                 case "DOWN":
                     player.position = this.maze[lastPosition.row + 1][lastPosition.column];
-                    break;
+                    return true;
                 case "LEFT":
                     player.position = this.maze[lastPosition.row][lastPosition.column - 1];
-                    break;
+                    return true;
                 case "RIGHT":
                     player.position = this.maze[lastPosition.row][lastPosition.column + 1];
-                    break;
+                    return true;
             }
         }
+        return false;
     }
 
     generate() {
         let randomStartY = Math.floor(Math.random() * this.height);
         let randomStartX = Math.floor(Math.random() * this.width);
         this.startZone = this.maze[randomStartY][randomStartX];
-        console.log(this.startZone)
         let current = this.startZone;
         let stack = [];
         current.visited = true;
@@ -200,13 +224,10 @@ module.exports = class Arena {
 
     isMoveAllowed(cell, direction){
         if(direction === "UP"){
-            console.log("UP")
             return !cell.topWall;
         } else if(direction === "DOWN"){
-            console.log("DOWN UU")
             return !cell.bottomWall;
         } else if(direction === "LEFT"){
-            console.log("LEFT")
             return !cell.leftWall;
         } else if(direction === "RIGHT") {
             return !cell.rightWall;

@@ -2,14 +2,28 @@ const express = require('express');
 const WebSocket = require('ws');
 const Session = require('./session');
 const Client = require('./client');
+const path = require("path");
 const {v4: uuidv4} = require('uuid');
 const app = express();
+const performance = require('perf_hooks').performance;
 
 const server = app.listen(3000, function () {
     console.log('My server is running on port 3000');
 });
 
-app.use(express.static('public'));
+// app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '../public')));
+app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "../public/index.html"));
+});
+
+// app.use(function(req, res, next) {
+//     console.log("request", req.originalUrl);
+//     const removeOnRoutes = '/tiwpr_gameServer/public';
+//     req.originalUrl = req.originalUrl.replace(removeOnRoutes,'');
+//     req.path = req.path.replace(removeOnRoutes,'');
+//     return next();
+// });
 
 const wss = new WebSocket.Server({server});
 const sessions = new Map;
@@ -41,14 +55,20 @@ function getSession(id) {
 }
 
 wss.on('connection', conn => {
+    conn.isAlive = true;
     console.log('Connection established');
     let client = createClient(conn);
+    conn.on('pong', () => {
+        console.log("Got Pong");
+        conn.isAlive = true;
+    });
     conn.on('message', msg => {
         let decodedMsg = new TextDecoder().decode(msg);
         let messages = decodedMsg.split(" ");
-        console.log("Got msg ", decodedMsg);
+        console.log("Got msg", decodedMsg);
         for (let i = 0; i < messages.length; i++) {
             const message = messages[i++];
+            client.timeOfLastMessage = performance.now();
             if (message === 'create-session') {
                 const session = createSession();
                 // session.join(client);
@@ -60,7 +80,6 @@ wss.on('connection', conn => {
                 const sessionId = messages[i++];
                 const session = getSession(sessionId) || createSession(sessionId);
                 let value = "";
-                console.log(session);
                 if (session.isFull()) {
                     value = "Session-is-full";
                     client.send([{
@@ -85,9 +104,7 @@ wss.on('connection', conn => {
                     createNewUser(client);
                 }
             } else if (message === 'refresh-lobby-list') {
-                console.log("REFRESH THIS? LOL.");
                 let arr = [];
-                console.log(sessions.values());
                 for (const value of sessions.values()) {
                     let playerOneName = value.client1 === null ? "null" : value.client1.name;
                     let playerTwoName = value.client2 === null ? "null" : value.client2.name;
@@ -109,6 +126,17 @@ wss.on('connection', conn => {
                 handleKeyPress(client, keyPressed);
             } else if (message === 'need-arena-info') {
                 sendArenaInformation(client);
+            } else if (message === 'player-moved') {
+                let move = messages[i++];
+                handlePlayerMove(client, move);
+            } else if (message === 'ping') {
+                client.send([{
+                    type: 'pong',
+                    value: []
+                }]);
+            } else if (message === 'pong') {
+                client.latency = performance.now() - client.pingTime;
+                console.log("client latency ", client.latency)
             }
         }
     });
@@ -116,7 +144,6 @@ wss.on('connection', conn => {
     conn.on('close', () => {
         console.log('Connection closed');
         const session = client.session;
-        console.log('Sessions', sessions);
         if (session) {
             try {
                 session.leave(client);
@@ -143,6 +170,21 @@ function handleKeyPress(client, keyPressed) {
                 let playerGameId = session.arena.player2.gameId;
                 session.sendMsgToClients("changed-ready-status", [playerGameId, 1]);
             }
+        }
+    }
+}
+
+function handlePlayerMove(client, move) {
+    let clientSession = sessions.get(client.session.id);
+    let player1 = clientSession.arena.player1;
+    let player2 = clientSession.arena.player2;
+    if (player1.client.id === client.id) {
+        if (clientSession.arena.movePlayer(player1, move)) {
+            sendNewPlayerPosition(clientSession.differentClient(client), player1.gameId, player1.position);
+        }
+    } else if (player2.client.id === client.id) {
+        if (clientSession.arena.movePlayer(player2, move)) {
+            sendNewPlayerPosition(clientSession.differentClient(client), player2.gameId, player2.position);
         }
     }
 }
@@ -188,7 +230,6 @@ function sendPlayerInformation(client) {
             name = session.arena.player1.client.name;
             gameId = session.arena.player1.gameId;
         }
-        console.log("sending name", name);
         client.send([{
             type: 'playerGameId-newName',
             value: [gameId, name]
@@ -225,19 +266,39 @@ function createNewUser(client) {
     }]);
 }
 
+function sendNewPlayerPosition(toClient, gameId, position) {
+    toClient.send([{
+        type: 'gameId-playerPos',
+        value: [gameId, position.column, position.row]
+    }]);
+}
+
 function updateClients() {
     setInterval(function () {
         sessions.forEach(function (session) {
             session.update();
             session.sendUpdate();
         });
-        // sessions.forEach(function (session) {
-        //     session.update();
-        //     session.sendUpdate();
-        // });
 
     }, 500);
 }
 
+function heartbeat() {
+    setInterval(function () {
+        for (let [key, val] of clients) {
+            if (val.isAlive === false) {
+                clients.delete(key);
+            }
+            val.isAlive = true;
+            val.pingTime = performance.now();
+            console.log("SENDING PING");
+            val.send([{
+                type: 'ping',
+                value: []
+            }]);
+        }
+    }, 30000);
+}
 
 updateClients();
+heartbeat();

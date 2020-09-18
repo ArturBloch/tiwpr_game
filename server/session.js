@@ -11,11 +11,12 @@ class Session {
         this.arena.player2.gameId = uuidv4();
         this.client1 = null;
         this.client2 = null;
+        this.player1Finished = false;
+        this.player2Finished = false;
     }
 
     join(client) {
         console.log("client joining");
-        console.log(client.session);
         if (client.session) {
             console.error('Client already in session');
         } else {
@@ -30,7 +31,6 @@ class Session {
                 this.client2 = client;
                 this.arena.player2.client = client;
                 client.session = this;
-                console.log(this)
                 return;
             }
         }
@@ -71,6 +71,20 @@ class Session {
             this.sendMsgToClients("maze-start-exit", [this.arena.startZone.column, this.arena.startZone.row, this.arena.exitZone.column, this.arena.exitZone.row]);
             this.sendMsgToClients("player-position", [this.arena.player1.gameId, this.arena.player1.position.column, this.arena.player1.position.row]);
             this.sendMsgToClients("player-position", [this.arena.player2.gameId, this.arena.player2.position.column, this.arena.player2.position.row]);
+        }
+        this.checkIfPlayerFinished();
+    }
+
+    checkIfPlayerFinished(){
+        if(this.arena.player1.finished && !this.player1Finished){
+            this.arena.player1.mazeTimer = this.arena.player1.mazeTimer - ((performance.now() - this.client1.timeOfLastMessage) / 1000);
+            this.sendMsgToClients("player-finished", [this.arena.player1.gameId, this.arena.player1.mazeTimer])
+            this.player1Finished = true;
+        }
+        if(this.arena.player2.finished && !this.player2Finished){
+            this.arena.player2.mazeTimer = this.arena.player2.mazeTimer - ((performance.now() - this.client2.timeOfLastMessage) / 1000);
+            this.sendMsgToClients("player-finished", [this.arena.player2.gameId, this.arena.player2.mazeTimer])
+            this.player2Finished = true;
         }
     }
 
@@ -114,7 +128,6 @@ class Session {
 
     isFull(){
         const isFull = this.client1 !== null && this.client2 !== null;
-        console.log("IS FULL? ", isFull);
         return isFull;
     }
 
@@ -126,9 +139,7 @@ class Session {
     }
 
     sendMsgToClients(msg, data) {
-        console.log("sending msg hehe to clients hehe ");
         if (this.client1 !== null) {
-            console.log("sending msg to client 1");
             this.client1.send([{
                 type: msg,
                 value: data

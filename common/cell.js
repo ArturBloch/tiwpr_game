@@ -8,4 +8,8 @@ module.exports = class Cell {
         this.leftWall = true;
         this.visited = false;
     }
+
+    isSame(anotherCell){
+        return this.column === anotherCell.column && this.row === anotherCell.row;
+    }
 }

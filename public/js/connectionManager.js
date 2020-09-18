@@ -7,9 +7,9 @@ module.exports = class ConnectionManager {
         this.storedName = localStorage.getItem("name");
         this.conn = null;
         this.events = new Events();
-        console.log("HELLO");
         this.arena = new Arena();
         this.id = "";
+        this.isAlive = true;
     }
 
     connect(address) {
@@ -17,12 +17,16 @@ module.exports = class ConnectionManager {
         this.conn.binaryType = "arraybuffer";
 
         this.conn.addEventListener('open', () => {
+            this.isAlive = true;
             console.log('Connection established');
             this.initializeConnection();
         });
 
         this.conn.addEventListener('message', event => {
             this.receive(event.data);
+        });
+        this.conn.addEventListener('close', function clear() {
+            console.log("Closed connection :(");
         });
     }
 
@@ -140,6 +144,12 @@ module.exports = class ConnectionManager {
             if(message === "countdown-update"){
                 this.arena.setCountdownTimer(messages[i++], performance.now());
             }
+            if(message === "gameId-playerPos"){
+                let gameId = messages[i++];
+                let column = messages[i++];
+                let row = messages[i++];
+                this.arena.setPlayerPosition(gameId, column, row);
+            }
             if(message === "maze-start-exit"){
                 let startingX = messages[i++];
                 let startingY = messages[i++];
@@ -153,6 +163,21 @@ module.exports = class ConnectionManager {
                 let positionX = messages[i++];
                 let positionY = messages[i++];
                 this.arena.setPlayerPosition(gameId, positionX, positionY);
+            }
+            if(message === "player-finished"){
+                let gameId = messages[i++];
+                let mazeTimer = messages[i++];
+                this.arena.setPlayerFinalMazeTimer(gameId, mazeTimer);
+            }
+            if(message === "pong"){
+                this.isAlive = true;
+            }
+            if(message === "ping"){
+                this.isAlive = true;
+                this.send([{
+                    type: 'pong',
+                    value: [],
+                }]);
             }
         }
     }
@@ -187,10 +212,30 @@ module.exports = class ConnectionManager {
         }]);
     }
 
+    sendMoveAction(move){
+        this.send([{
+            type: 'player-moved',
+            value: [move]
+        }]);
+    }
+
     sendKeyPress(key){
         this.send([{
             type: 'key-pressed',
             value: [key]
+        }]);
+    }
+
+    heartbeat(){
+        if (this.isAlive === false){
+            this.conn.close();
+            return;
+        }
+        console.log("SENDING PING");
+        this.isAlive = false;
+        this.send([{
+            type: 'ping',
+            value: []
         }]);
     }
 }

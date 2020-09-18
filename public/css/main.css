@@ -9,7 +9,7 @@ body {
     margin-left: 0px;
     margin-bottom: 0px;
     overflow: hidden;
-    background: url('../../common/3156605.jpg') no-repeat center center fixed;
+    background: url('../img/3156605.jpg') no-repeat center center fixed;
     -webkit-background-size: cover;
     -moz-background-size: cover;
     background-size: cover;

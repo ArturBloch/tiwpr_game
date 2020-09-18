@@ -74,3 +74,15 @@ refreshLobbyButton.addEventListener('click', function() {
 changeNameButton.addEventListener('click', function() {
     connectionManager.changeName(nameForm.value);
 });
+
+function heartbeat() {
+    setInterval(function () {
+        connectionManager.heartbeat();
+    }, 30000);
+}
+
+function startLoop() {
+    heartbeat();
+}
+
+startLoop()

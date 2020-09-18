@@ -7,7 +7,6 @@ canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
 
 let cellSize = calculateCellSize();
-let mouseX, mouseY;
 let boardWidth = 15 * cellSize;
 const spriteSheet = new Image();
 let myself = arena.player1;
@@ -28,25 +27,30 @@ connectionManager.conn.onopen = function(){
     connectionManager.getArenaInformation();
 }
 
-
 document.addEventListener('keydown', event => {
-    console.log(myself)
-   if(event.code === "KeyR"){
-       console.log("PRESSED THIS SHIT")
-       connectionManager.sendKeyPress("R");
-   }
-   if(event.code === "KeyW" || event.code === "ArrowUp"){
-       arena.movePlayer(myself, "UP");
-   }
-   if(event.code === "KeyA" || event.code === "ArrowLeft"){
-       arena.movePlayer(myself, "LEFT");
-   }
-   if(event.code === "KeyD" || event.code === "ArrowRight"){
-       arena.movePlayer(myself,"RIGHT");
-   }
-   if(event.code === "KeyS" || event.code === "ArrowDown"){
-       arena.movePlayer(myself,"DOWN");
-   }
+    if(event.code === "KeyR"){
+        connectionManager.sendKeyPress("R");
+    }
+    if(event.code === "KeyW" || event.code === "ArrowUp"){
+        if(arena.movePlayer(myself, "UP")){
+            connectionManager.sendMoveAction("UP");
+        }
+    }
+    if(event.code === "KeyA" || event.code === "ArrowLeft"){
+        if(arena.movePlayer(myself, "LEFT")){
+            connectionManager.sendMoveAction("LEFT");
+        }
+    }
+    if(event.code === "KeyD" || event.code === "ArrowRight"){
+        if(arena.movePlayer(myself,"RIGHT")){
+            connectionManager.sendMoveAction("RIGHT");
+        }
+    }
+    if(event.code === "KeyS" || event.code === "ArrowDown"){
+        if(arena.movePlayer(myself,"DOWN")){
+            connectionManager.sendMoveAction("DOWN");
+        }
+    }
 });
 
 function getTextWidth(text) {
@@ -74,11 +78,6 @@ function loadSprites() {
     }
 }
 
-canvas.onmousemove = function (e) {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-};
-
 function calculateCellSize(){
     return Math.floor(canvas.width / 40);
 }
@@ -98,13 +97,11 @@ function createRectangleArray(id) {
             size: cellSize
         }
     }
-    console.table(rects);
 }
 
 function drawMaze(player){
     let displacementX = cellSize * 2 + player.id * cellSize * 20;
     let displacementY = cellSize * 2;
-    console.log(player.position, arena.gameStarted)
     if(arena.gameStarted && arena.countdownTimer < 0 && player.position !== null){
         context.fillStyle = "#404040";
         context.fillRect(displacementX + cellSize * arena.startZone.column, displacementY + cellSize * arena.startZone.row, cellSize, cellSize);
@@ -172,8 +169,13 @@ function print(player) {
     let displacementX = cellSize * 2 + player.id  * cellSize * 20;
     let displacementY = cellSize * 3;
     context.font = getFont();
-    context.fillStyle = "WHITE";
-    context.fillText(player.timer + " ms", displacementX, displacementY - cellSize);
+    if(player.finished) {
+        context.fillStyle = "GREEN";
+    } else {
+        context.fillStyle = "WHITE";
+    }
+    let mazeTimerMessage = parseFloat(player.mazeTimer).toFixed(2) + "s";
+    context.fillText(mazeTimerMessage, displacementX, displacementY - cellSize);
     context.fillText(player.name, displacementX, boardWidth + displacementY);
     let getReadyMessage = "Press R to make yourself ready";
     if(resized) getReadyMessagePosition = (boardWidth - getTextWidth(getReadyMessage))/2;
@@ -202,9 +204,16 @@ function update() {
     }, 10);
 }
 
+function heartbeat() {
+    setInterval(function () {
+            connectionManager.heartbeat();
+    }, 30000);
+}
+
 function startGame() {
     loadSprites()
     update()
+    heartbeat()
 }
 
 startGame()

@@ -22,14 +22,9 @@ module.exports = class Arena {
         this.countdownTimer = 0;
         this.player1 = new Player({id: 0, name: ""});
         this.player2 = new Player({id: 1, name: ""});
-        this.loaded = false;
         this.gameStarted = false;
         this.gameFinished = false;
         this.winner = null;
-    }
-
-    countdownTimerUpdate() {
-        this.countdownTimer = ((this.currentTime - this.readyTime) / 1000);
     }
 
     update(newCurrentTime) {
@@ -49,6 +44,15 @@ module.exports = class Arena {
         this.checkPlayerFinish();
     }
 
+    countdownTimerUpdate() {
+        this.countdownTimer = ((this.currentTime - this.readyTime) / 1000);
+    }
+
+    updateMazeTimers() {
+        if (!this.player1.finished) this.player1.mazeTimer = ((this.currentTime - this.gameTime) / 1000);
+        if (!this.player2.finished) this.player2.mazeTimer = ((this.currentTime - this.gameTime) / 1000);
+    }
+
     checkPlayerFinish() {
         if (this.exitZone !== null) {
             if (!this.player1.finished && this.player1.position !== null && this.player1.position.isSame(this.exitZone)) {
@@ -58,28 +62,6 @@ module.exports = class Arena {
                 this.player2.finished = true;
             }
         }
-    }
-
-    setTime(newTime, appTime) {
-        this.timer = newTime;
-        this.appTime = appTime;
-    }
-
-    playersReady() {
-        return this.player1.ready && this.player2.ready;
-    }
-
-    updateMazeTimers() {
-        if (!this.player1.finished) this.player1.mazeTimer = ((this.currentTime - this.gameTime) / 1000);
-        if (!this.player2.finished) this.player2.mazeTimer = ((this.currentTime - this.gameTime) / 1000);
-    }
-
-    setStart(startingX, startingY) {
-        this.startZone = this.maze[startingY][startingX];
-    }
-
-    setExit(endingX, endingY) {
-        this.exitZone = this.maze[endingY][endingX];
     }
 
     setPlayerFinalMazeTimer(gameId, mazeTimer) {
@@ -92,6 +74,20 @@ module.exports = class Arena {
             this.player2.finished = true;
         }
     }
+
+    playersReady() {
+        return this.player1.ready && this.player2.ready;
+    }
+
+
+    setStart(startingX, startingY) {
+        this.startZone = this.maze[startingY][startingX];
+    }
+
+    setExit(endingX, endingY) {
+        this.exitZone = this.maze[endingY][endingX];
+    }
+
 
     setPlayerPosition(gameId, positionX, positionY) {
         if (this.player1.gameId === gameId) {
@@ -123,8 +119,7 @@ module.exports = class Arena {
             }
         }
 
-        return
-        false;
+        return false;
     }
 
     getWinner() {
@@ -186,37 +181,6 @@ module.exports = class Arena {
         return neighbours[Math.floor(Math.random() * neighbours.length)] || null;
     }
 
-    changeConnectionStatus(gameId, connectionStatus) {
-        if (this.player1.gameId === gameId) {
-            this.player1.connected = connectionStatus;
-            if (!this.playersReady()) this.player1.name = "";
-        } else if (this.player2.gameId === gameId) {
-            this.player2.connected = connectionStatus;
-            if (!this.playersReady()) this.player2.name = "";
-        }
-    }
-
-    playerNewName(gameId, newName) {
-        if (this.player1.gameId === gameId) {
-            this.player1.name = newName;
-        } else if (this.player2.gameId === gameId) {
-            this.player2.name = newName;
-        }
-    }
-
-    newPlayerGameIds(player1GameId, player2GameId) {
-        this.player1.gameId = player1GameId;
-        this.player2.gameId = player2GameId;
-    }
-
-    changePlayerStatus(playerGameId, playerReadyStatus) {
-        if (this.player1.gameId === playerGameId) {
-            this.player1.ready = playerReadyStatus;
-        } else if (this.player2.gameId === playerGameId) {
-            this.player2.ready = playerReadyStatus;
-        }
-    }
-
     removeWall(current, next) {
         if ((current.column === next.column) && (current.row === next.row + 1)) {/// topWall
             current.topWall = false;
@@ -245,6 +209,37 @@ module.exports = class Arena {
             return !cell.leftWall;
         } else if (direction === "RIGHT") {
             return !cell.rightWall;
+        }
+    }
+
+    changeConnectionStatus(gameId, connectionStatus) {
+        if (this.player1.gameId === gameId) {
+            this.player1.connected = connectionStatus;
+            if (!this.playersReady()) this.player1.name = "";
+        } else if (this.player2.gameId === gameId) {
+            this.player2.connected = connectionStatus;
+            if (!this.playersReady()) this.player2.name = "";
+        }
+    }
+
+    playerNewName(gameId, newName) {
+        if (this.player1.gameId === gameId) {
+            this.player1.name = newName;
+        } else if (this.player2.gameId === gameId) {
+            this.player2.name = newName;
+        }
+    }
+
+    newPlayerGameIds(player1GameId, player2GameId) {
+        this.player1.gameId = player1GameId;
+        this.player2.gameId = player2GameId;
+    }
+
+    changePlayerStatus(playerGameId, playerReadyStatus) {
+        if (this.player1.gameId === playerGameId) {
+            this.player1.ready = playerReadyStatus;
+        } else if (this.player2.gameId === playerGameId) {
+            this.player2.ready = playerReadyStatus;
         }
     }
 }

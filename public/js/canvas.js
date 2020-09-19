@@ -8,7 +8,6 @@ canvas.width = window.innerWidth;
 
 let cellSize = calculateCellSize();
 let boardWidth = 15 * cellSize;
-const spriteSheet = new Image();
 let myself = arena.player1;
 let enemy = arena.player2;
 let resized = true;
@@ -80,12 +79,6 @@ function getFontSize() {
 
 function getFont() {
     return (getFontSize() | 0) + 'px ARIAL'; // set font
-}
-
-function loadSprites() {
-    spriteSheet.src = 'res/tiwpr.png';
-    spriteSheet.onload = function () {
-    }
 }
 
 function calculateCellSize() {
@@ -221,15 +214,14 @@ function heartbeat() {
 }
 
 function startGame() {
-    loadSprites()
     update()
     heartbeat()
 }
-
-startGame()
 
 function drawBoard() {
     context.clearRect(0, 0, canvas.width, canvas.height);
     drawMaze(myself)
     drawMaze(enemy)
 }
+
+startGame()

@@ -62,7 +62,7 @@ module.exports = class ConnectionManager {
         for (let i = 0; i < data.length; i++) {
             finalMSG = finalMSG === "" ? data[i].type : finalMSG + " " + data[i].type;
             for (let j = 0; j < data[i].value.length; j++) {
-                finalMSG = data[i].value[j] === undefined ? finalMSG : finalMSG + " " + data[i].value[j];
+                finalMSG = data[i].value[j] == null ? finalMSG : finalMSG + " " + data[i].value[j];
             }
         }
         let byteId = new TextEncoder().encode(finalMSG);
@@ -80,12 +80,8 @@ module.exports = class ConnectionManager {
         let messages = str.split(" ");
         for (let i = 0; i < messages.length; i++) {
             const message = messages[i++];
-            if (message === "time-update") {
-                this.arena.setTime(messages[i++], performance.now());
-            }
             if(message === "game-started"){
-                let gameStarted = messages[i++] === "true";
-                this.arena.gameStarted = gameStarted;
+                this.arena.gameStarted = messages[i++] === "true";
             }
             if (message === "client-id") {
                 let value = messages[i++];
@@ -164,12 +160,6 @@ module.exports = class ConnectionManager {
                 let endingY = messages[i++];
                 this.arena.setStart(startingX, startingY);
                 this.arena.setExit(endingX, endingY);
-            }
-            if (message === "player-position") {
-                let gameId = messages[i++];
-                let positionX = messages[i++];
-                let positionY = messages[i++];
-                this.arena.setPlayerPosition(gameId, positionX, positionY);
             }
             if (message === "player-finished") {
                 let gameId = messages[i++];

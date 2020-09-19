@@ -5,7 +5,6 @@ const Client = require('./client');
 const path = require("path");
 const {v4: uuidv4} = require('uuid');
 const app = express();
-const performance = require('perf_hooks').performance;
 
 const server = app.listen(3000, function () {
     console.log('My server is running on port 3000');
@@ -33,7 +32,6 @@ wss.on('connection', conn => {
         console.log("Got msg", decodedMsg);
         for (let i = 0; i < messages.length; i++) {
             const message = messages[i++];
-            client.timeOfLastMessage = performance.now();
             if (message === 'create-session') {
                 createSession();
             } else if (message === 'join-session') {
@@ -54,7 +52,7 @@ wss.on('connection', conn => {
                         value: [value]
                     }]);
                 } else {
-                    if (client.name === "") {
+                    if (client.name === "") { // if the client has an empty name then generate him one and join the client
                         client.name = generateRandomName();
                         client.send([{
                             type: 'new-name',
@@ -71,8 +69,9 @@ wss.on('connection', conn => {
             } else if (message === 'welcome') {
                 if (clients.has(messages[i])) {
                     console.log("Welcome again " + messages[i]);
-                    client = clients.get(messages[i++]);
-                    if(client != null){
+                    let clientId = messages[i++];
+                    if(clients.get(clientId) != null){
+                        client = clients.get(clientId);
                         client.conn = conn;
                         client.pingsUnanswered = 0;
                         client.isAlive = true;
@@ -115,7 +114,6 @@ wss.on('connection', conn => {
                     value: []
                 }]);
             } else if (message === 'pong') {
-                client.latency = performance.now() - client.pingTime;
                 client.isAlive = true;
                 client.pingsUnanswered = 0;
             }
@@ -135,18 +133,6 @@ wss.on('connection', conn => {
         }
     });
 });
-
-function createId() {
-    return uuidv4();
-}
-
-function createClient(conn, id = createId()) {
-    return new Client(conn, id);
-}
-
-function generateRandomName() {
-    return "player" + uuidv4().substring(0, 5);
-}
 
 function createSession(id = createId()) {
     if (sessions.has(id)) {
@@ -194,6 +180,7 @@ function handlePlayerMove(client, move) {
         }
     }
 }
+
 function sendReconnectInformation(client){
     let clientSession = sessions.get(client.session.id);
 
@@ -254,6 +241,27 @@ function sendMazeData(client) {
     }]);
 }
 
+function sendNewPlayerPosition(toClient, gameId, position) {
+    if (toClient != null) {
+        toClient.send([{
+            type: 'gameId-playerPos',
+            value: [gameId, position.column, position.row]
+        }]);
+    }
+}
+
+function createId() {
+    return uuidv4();
+}
+
+function createClient(conn, id = createId()) {
+    return new Client(conn, id);
+}
+
+function generateRandomName() {
+    return "player" + uuidv4().substring(0, 5);
+}
+
 function createNewUser(client) {
     let clientId = createId();
     client.id = clientId;
@@ -262,15 +270,6 @@ function createNewUser(client) {
         type: 'client-id',
         value: [clientId]
     }]);
-}
-
-function sendNewPlayerPosition(toClient, gameId, position) {
-    if (toClient != null) {
-        toClient.send([{
-            type: 'gameId-playerPos',
-            value: [gameId, position.column, position.row]
-        }]);
-    }
 }
 
 function removeClient(key, client) {
@@ -310,7 +309,6 @@ function heartbeat() {
                 }
             }
             val.isAlive = false;
-            val.pingTime = performance.now();
             console.log("SENDING PING");
             val.send([{
                 type: 'ping',

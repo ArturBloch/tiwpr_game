@@ -8,17 +8,15 @@ module.exports = class Client {
         this.id = id;
         this.events = new Events();
         this.name = "";
-        this.pingTime = 0;
-        this.timeOfLastMessage = 0;
         this.pingsUnanswered = 0;
     }
 
-    send(data) {
+    send(data) { // can send an array of message structures like [{ type : type , value : [values] }, ...]
         let finalMSG = "";
         for (let i = 0; i < data.length; i++) {
             finalMSG = finalMSG === "" ? data[i].type : finalMSG + " " + data[i].type;
             for (let j = 0; j < data[i].value.length; j++) {
-                finalMSG = data[i].value[j] === undefined ? finalMSG : finalMSG + " " + data[i].value[j];
+                finalMSG = data[i].value[j] == null ? finalMSG : finalMSG + " " + data[i].value[j];
             }
         }
         let byteId = new TextEncoder().encode(finalMSG);

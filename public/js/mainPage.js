@@ -24,7 +24,6 @@ connectionManager.events.listen('join-session-response', response => {
         let hash = '#' + response;
         console.log("imafterhere");
         window.location.href = url + hash;
-
     }
 });
 

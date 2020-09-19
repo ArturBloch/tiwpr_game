@@ -1,3 +1,4 @@
+// Helper class for creating the maze
 module.exports = class Cell {
     constructor(x, y) {
         this.column = x;

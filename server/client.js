@@ -7,9 +7,10 @@ module.exports = class Client {
         this.session = null;
         this.id = id;
         this.events = new Events();
-        this.name = null;
+        this.name = "";
         this.pingTime = 0;
         this.timeOfLastMessage = 0;
+        this.pingsUnanswered = 0;
     }
 
     send(data) {
@@ -22,10 +23,10 @@ module.exports = class Client {
         }
         let byteId = new TextEncoder().encode(finalMSG);
         console.log(`Sending message ${finalMSG} in byteArray ` + byteId);
-        this.conn.send(byteId, function ack(err) {
-            if (err) {
-                console.error('Message failed lost connection!', this.conn.id);
-            }
-        });
+        try {
+            this.conn.send(byteId);
+        } catch (err) {
+            console.error('Message failed lost connection!', this.conn.id);
+        }
     }
 }

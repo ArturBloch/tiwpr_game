@@ -1,3 +1,4 @@
+// Events used in communication between connectionManager(which handles messages) and page
 module.exports = class Events {
     constructor()
     {

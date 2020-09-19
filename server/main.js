@@ -27,10 +27,6 @@ wss.on('connection', conn => {
     conn.isAlive = true;
     console.log('Connection established');
     let client = createClient(conn);
-    conn.on('pong', () => {
-        console.log("Got Pong");
-        conn.isAlive = true;
-    });
     conn.on('message', msg => {
         let decodedMsg = new TextDecoder().decode(msg);
         let messages = decodedMsg.split(" ");
@@ -44,13 +40,27 @@ wss.on('connection', conn => {
                 const sessionId = messages[i++];
                 const session = getSession(sessionId) || createSession(sessionId);
                 let value = "";
-                if (session.isFull()) {
+                if(session.reconnectIfPossible(client)){
+                    value = session.id;
+                    client.send([{
+                        type: 'session-join-result',
+                        value: [value]
+                    }]);
+                    sendReconnectInformation(client);
+                } else if (session.isFull()) {
                     value = "Session-is-full";
                     client.send([{
                         type: 'session-join-result',
                         value: [value]
                     }]);
                 } else {
+                    if (client.name === "") {
+                        client.name = generateRandomName();
+                        client.send([{
+                            type: 'new-name',
+                            value: [client.name]
+                        }]);
+                    }
                     value = session.id;
                     session.join(client);
                     client.send([{
@@ -58,20 +68,26 @@ wss.on('connection', conn => {
                         value: [value]
                     }]);
                 }
-                i++;
             } else if (message === 'welcome') {
                 if (clients.has(messages[i])) {
-                    console.log("Welcome again " + messages[i])
+                    console.log("Welcome again " + messages[i]);
                     client = clients.get(messages[i++]);
-                    client.conn = conn;
+                    if(client != null){
+                        client.conn = conn;
+                        client.pingsUnanswered = 0;
+                        client.isAlive = true;
+                        console.log("Found client in a map");
+                    } else {
+                        createNewUser(client);
+                    }
                 } else {
                     createNewUser(client);
                 }
             } else if (message === 'refresh-lobby-list') {
                 let arr = [];
                 for (const value of sessions.values()) {
-                    let playerOneName = value.client1 === null ? "null" : value.client1.name;
-                    let playerTwoName = value.client2 === null ? "null" : value.client2.name;
+                    let playerOneName = value.arena.player1.client === null ? "null" : value.arena.player1.client.name;
+                    let playerTwoName = value.arena.player2.client === null ? "null" : value.arena.player2.client.name;
                     arr.push(value.id, playerOneName, playerTwoName);
                 }
                 arr.push("END");
@@ -100,7 +116,8 @@ wss.on('connection', conn => {
                 }]);
             } else if (message === 'pong') {
                 client.latency = performance.now() - client.pingTime;
-                console.log("client latency ", client.latency)
+                client.isAlive = true;
+                client.pingsUnanswered = 0;
             }
         }
     });
@@ -108,9 +125,10 @@ wss.on('connection', conn => {
     conn.on('close', () => {
         console.log('Connection closed');
         const session = client.session;
-        if (session) {
+        if (session != null) { // if the game didnt start yet then don't block the lobby
             try {
-                session.leave(client);
+                session.removeClient(client);
+                client.session = null;
             } catch (e) {
                 console.error(e.message);
             }
@@ -124,6 +142,10 @@ function createId() {
 
 function createClient(conn, id = createId()) {
     return new Client(conn, id);
+}
+
+function generateRandomName() {
+    return "player" + uuidv4().substring(0, 5);
 }
 
 function createSession(id = createId()) {
@@ -148,11 +170,11 @@ function handleKeyPress(client, keyPressed) {
             if (session.arena.player1.client !== null && client.id === session.arena.player1.client.id) {
                 session.arena.player1.ready = true;
                 let playerGameId = session.arena.player1.gameId;
-                session.sendMsgToClients("changed-ready-status", [playerGameId, 1]);
+                session.sendMsgToClients("changed-ready-status", [playerGameId, session.arena.player1.ready]);
             } else if (session.arena.player2.client !== null && client.id === session.arena.player2.client.id) {
                 session.arena.player2.ready = true;
                 let playerGameId = session.arena.player2.gameId;
-                session.sendMsgToClients("changed-ready-status", [playerGameId, 1]);
+                session.sendMsgToClients("changed-ready-status", [playerGameId, session.arena.player2.ready]);
             }
         }
     }
@@ -172,52 +194,44 @@ function handlePlayerMove(client, move) {
         }
     }
 }
+function sendReconnectInformation(client){
+    let clientSession = sessions.get(client.session.id);
 
+    if(clientSession != null){
+        sendArenaInformation(client);
+        client.send([{
+            type: 'gameTime',
+            value: [clientSession.arena.gameTime]
+        }]);
+    }
+    if(clientSession.gameStarted){
+        client.send([{
+            type: 'gameTime',
+            value: [clientSession.arena.gameTime]
+        }]);
+
+    }
+    clientSession.reconnect(client);
+}
 function sendArenaInformation(client) {
     let clientSession = sessions.get(client.session.id);
     if (clientSession !== null) {
-        sendPlayerGameIds(client);
-        sendPlayerInformation(client);
-        sendPlayerInformation(sessions.get(clientSession.id).differentClient(client));
-        sendMazeData(client, clientSession);
-    }
-}
-
-function sendPlayerGameIds(client) {
-    let session = client.session;
-    let clientGameId;
-    let enemyGameId;
-    if (session.arena.player1.client.id === client.id) {
-        enemyGameId = session.arena.player2.gameId;
-        clientGameId = session.arena.player1.gameId;
-    } else if (session.arena.player2.client.id === client.id) {
-        enemyGameId = session.arena.player1.gameId;
-        clientGameId = session.arena.player2.gameId;
-    }
-    client.send([{
-        type: 'player-game-ids',
-        value: [clientGameId, enemyGameId]
-    }]);
-}
-
-function sendPlayerInformation(client) {
-    if (client !== null) {
-        let name;
-        let gameId;
-        let session = client.session;
-        if (session.arena.player1.client.id === client.id) {
-            if (session.client2 === null) return;
-            name = session.arena.player2.client.name;
-            gameId = session.arena.player2.gameId;
-        } else if (session.arena.player2.client.id === client.id) {
-            if (session.client1 === null) return;
-            name = session.arena.player1.client.name;
-            gameId = session.arena.player1.gameId;
+        let enemyGameId = "";
+        let clientGameId = "";
+        if (clientSession.arena.player1.client.id === client.id) {
+            clientGameId = clientSession.arena.player1.gameId;
+            enemyGameId = clientSession.arena.player2.gameId;
+        } else if (clientSession.arena.player2.client.id === client.id) {
+            clientGameId = clientSession.arena.player2.gameId;
+            enemyGameId = clientSession.arena.player1.gameId;
         }
         client.send([{
-            type: 'playerGameId-newName',
-            value: [gameId, name]
+            type: 'player-ids',
+            value: [clientGameId, enemyGameId]
         }]);
+        clientSession.shareSessionInformation();
+        clientSession.shareReadyStatus();
+        sendMazeData(client, clientSession);
     }
 }
 
@@ -251,10 +265,22 @@ function createNewUser(client) {
 }
 
 function sendNewPlayerPosition(toClient, gameId, position) {
-    toClient.send([{
-        type: 'gameId-playerPos',
-        value: [gameId, position.column, position.row]
-    }]);
+    if (toClient != null) {
+        toClient.send([{
+            type: 'gameId-playerPos',
+            value: [gameId, position.column, position.row]
+        }]);
+    }
+}
+
+function removeClient(key, client) {
+    if (client.session != null) {
+        client.session.removeClient(client);
+        client.session = null;
+    }
+    if(client.session != null && client.session.finished)
+    clients.delete(key);
+    console.log("removing client " + key);
 }
 
 function updateClients() {
@@ -264,8 +290,8 @@ function updateClients() {
             let end = session.sendUpdate();
             if (end) {
                 console.log("Removing " + sessionId);
-                session.client1.session = null;
-                session.client2.session = null;
+                if (session.arena.player1.client != null) session.arena.player2.client.session = null;
+                if (session.arena.player2.client != null) session.arena.player2.client.session = null;
                 sessions.delete(sessionId);
             }
         });
@@ -277,9 +303,13 @@ function heartbeat() {
     setInterval(function () {
         for (let [key, val] of clients) {
             if (val.isAlive === false) {
-                clients.delete(key);
+                val.pingsUnanswered++;
+                if (val.pingsUnanswered >= 1) {
+                    removeClient(key, val);
+                    return;
+                }
             }
-            val.isAlive = true;
+            val.isAlive = false;
             val.pingTime = performance.now();
             console.log("SENDING PING");
             val.send([{
@@ -287,5 +317,5 @@ function heartbeat() {
                 value: []
             }]);
         }
-    }, 30000);
+    }, 20000);
 }

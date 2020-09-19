@@ -15,9 +15,11 @@ module.exports = class Arena {
                 this.maze[i][j] = new Cell(j, i);
             }
         }
-        this.timer = 5;
+        this.readyTime = 0;
+        this.gameTime = 0;
+        this.currentTime = Date.now();
+        this.countdownStarted = false;
         this.countdownTimer = 0;
-        this.appTime = 0;
         this.player1 = new Player({id: 0, name: ""});
         this.player2 = new Player({id: 1, name: ""});
         this.loaded = false;
@@ -26,26 +28,25 @@ module.exports = class Arena {
         this.winner = null;
     }
 
-    start() {
-
+    countdownTimerUpdate() {
+        this.countdownTimer = ((this.currentTime - this.readyTime) / 1000);
     }
 
-    countdownTimerUpdate(nowTime){
-        this.countdownTimer = (this.countdownTimer - (nowTime - this.appTime) / 1000);
-    }
-
-    update(nowTime) {
-        if(this.countdownTimer < 0) {
+    update(newCurrentTime) {
+        this.currentTime = newCurrentTime;
+        if (this.playersReady() && !this.countdownStarted) {
+            this.readyTime = Date.now();
+            this.countdownStarted = true;
+        }
+        if (this.countdownStarted && !this.gameStarted) {
+            this.countdownTimerUpdate();
+        }
+        if (!this.gameStarted && this.countdownStarted && this.countdownTimer >= 5) {
+            this.gameTime = Date.now();
             this.gameStarted = true;
         }
-        if(this.countdownStarted()) this.countdownTimerUpdate(nowTime);
-        if(this.gameStarted) this.updateMazeTimers(nowTime);
+        if (this.gameStarted) this.updateMazeTimers();
         this.checkPlayerFinish();
-        this.setAppTime(nowTime);
-    }
-
-    setAppTime(newTime){
-        this.appTime = newTime;
     }
 
     checkPlayerFinish() {
@@ -59,97 +60,85 @@ module.exports = class Arena {
         }
     }
 
-    setCountdownTimer(newCountdownTime, newAppTime){
-        this.countdownTimer = newCountdownTime;
-        this.appTime = newAppTime;
-    }
-
     setTime(newTime, appTime) {
         this.timer = newTime;
         this.appTime = appTime;
     }
 
-    playersReady(){
+    playersReady() {
         return this.player1.ready && this.player2.ready;
     }
 
-    startCountDownTimer(startAppTime){
-        this.countdownTimer = 5;
-        this.setAppTime(startAppTime);
+    updateMazeTimers() {
+        if (!this.player1.finished) this.player1.mazeTimer = ((this.currentTime - this.gameTime) / 1000);
+        if (!this.player2.finished) this.player2.mazeTimer = ((this.currentTime - this.gameTime) / 1000);
     }
 
-    updateMazeTimers(nowTime){
-        if(!this.player1.finished) this.player1.mazeTimer = (this.player1.mazeTimer + (nowTime - this.appTime) / 1000);
-        if(!this.player2.finished) this.player2.mazeTimer = (this.player2.mazeTimer + (nowTime - this.appTime) / 1000);
-    }
-
-    countdownStarted(){
-        return this.countdownTimer !== 0;
-    }
-
-    setStart(startingX, startingY){
+    setStart(startingX, startingY) {
         this.startZone = this.maze[startingY][startingX];
     }
 
-    setExit(endingX, endingY){
+    setExit(endingX, endingY) {
         this.exitZone = this.maze[endingY][endingX];
     }
 
-    setPlayerFinalMazeTimer(gameId, mazeTimer){
-        if(this.player1.gameId === gameId){
+    setPlayerFinalMazeTimer(gameId, mazeTimer) {
+        if (this.player1.gameId === gameId) {
             this.player1.mazeTimer = mazeTimer;
             this.player1.finished = true;
         }
-        if(this.player2.gameId === gameId){
+        if (this.player2.gameId === gameId) {
             this.player2.mazeTimer = mazeTimer;
             this.player2.finished = true;
         }
     }
 
-    setPlayerPosition(gameId, positionX, positionY){
-        if(this.player1.gameId === gameId){
+    setPlayerPosition(gameId, positionX, positionY) {
+        if (this.player1.gameId === gameId) {
             this.player1.position = this.maze[positionY][positionX];
         }
-        if(this.player2.gameId === gameId){
+        if (this.player2.gameId === gameId) {
             this.player2.position = this.maze[positionY][positionX];
         }
     }
 
-    movePlayer(player, direction){
-        if(this.isMoveAllowed(player.position, direction)){
-            let lastPosition = player.position;
-            switch(direction){
-                case "UP":
-                    player.position = this.maze[lastPosition.row - 1][lastPosition.column];
-                    return true;
-                case "DOWN":
-                    player.position = this.maze[lastPosition.row + 1][lastPosition.column];
-                    return true;
-                case "LEFT":
-                    player.position = this.maze[lastPosition.row][lastPosition.column - 1];
-                    return true;
-                case "RIGHT":
-                    player.position = this.maze[lastPosition.row][lastPosition.column + 1];
-                    return true;
+    movePlayer(player, direction) {
+        if (!player.finished) {
+            if (this.isMoveAllowed(player.position, direction)) {
+                let lastPosition = player.position;
+                switch (direction) {
+                    case "UP":
+                        player.position = this.maze[lastPosition.row - 1][lastPosition.column];
+                        return true;
+                    case "DOWN":
+                        player.position = this.maze[lastPosition.row + 1][lastPosition.column];
+                        return true;
+                    case "LEFT":
+                        player.position = this.maze[lastPosition.row][lastPosition.column - 1];
+                        return true;
+                    case "RIGHT":
+                        player.position = this.maze[lastPosition.row][lastPosition.column + 1];
+                        return true;
+                }
             }
         }
-        return false;
+
+        return
+        false;
     }
 
-    getWinner(){
-        if(this.player1.mazeTimer > this.player2.mazeTimer) return this.player2;
-        if(this.player2.mazeTimer > this.player1.mazeTimer) return this.player1;
+    getWinner() {
+        if (this.player1.mazeTimer > this.player2.mazeTimer) return this.player2;
+        if (this.player2.mazeTimer > this.player1.mazeTimer) return this.player1;
         return null;
     }
 
-    setWinner(resultId){
+    setWinner(resultId) {
         this.gameFinished = true;
-        if(this.player1.gameId === resultId){
+        if (this.player1.gameId === resultId) {
             this.winner = this.player1;
-            console.log("Set player1 as winner");
-        } else if(this.player2.gameId === resultId){
+        } else if (this.player2.gameId === resultId) {
             this.winner = this.player2;
-            console.log("Set player2 as winner");
         }
     }
 
@@ -172,7 +161,7 @@ module.exports = class Arena {
                 current.visited = true;
             } else {
                 current = stack.pop();
-                if(counter > 10 && this.exitZone === null){
+                if (counter > 10 && this.exitZone === null) {
                     this.exitZone = this.maze[current.row][current.column];
                 }
             }
@@ -180,10 +169,6 @@ module.exports = class Arena {
         while (stack.length !== 0);
         this.player1.position = this.startZone;
         this.player2.position = this.startZone;
-    }
-
-    manhattanDistance(startX, startY, endX, endY){
-        return Math.abs((startX - endX) + (startY - endY));
     }
 
     getUnvisitedNeighbours(cells, {column, row}) {
@@ -201,24 +186,34 @@ module.exports = class Arena {
         return neighbours[Math.floor(Math.random() * neighbours.length)] || null;
     }
 
-    playerNewName(gameId, newName){
-        if(this.player1.gameId === gameId){
+    changeConnectionStatus(gameId, connectionStatus) {
+        if (this.player1.gameId === gameId) {
+            this.player1.connected = connectionStatus;
+            if (!this.playersReady()) this.player1.name = "";
+        } else if (this.player2.gameId === gameId) {
+            this.player2.connected = connectionStatus;
+            if (!this.playersReady()) this.player2.name = "";
+        }
+    }
+
+    playerNewName(gameId, newName) {
+        if (this.player1.gameId === gameId) {
             this.player1.name = newName;
-        } else if(this.player2.gameId === gameId){
+        } else if (this.player2.gameId === gameId) {
             this.player2.name = newName;
         }
     }
 
-    newPlayerGameIds(player1GameId, player2GameId){
+    newPlayerGameIds(player1GameId, player2GameId) {
         this.player1.gameId = player1GameId;
         this.player2.gameId = player2GameId;
     }
 
-    changePlayerStatus(playerGameId, playerReadyStatus){
-        if(this.player1.gameId === playerGameId){
-            this.player1.ready = playerReadyStatus === "1";
-        } else if(this.player2.gameId === playerGameId){
-            this.player2.ready = playerReadyStatus === "1";
+    changePlayerStatus(playerGameId, playerReadyStatus) {
+        if (this.player1.gameId === playerGameId) {
+            this.player1.ready = playerReadyStatus;
+        } else if (this.player2.gameId === playerGameId) {
+            this.player2.ready = playerReadyStatus;
         }
     }
 
@@ -241,14 +236,14 @@ module.exports = class Arena {
         }
     }
 
-    isMoveAllowed(cell, direction){
-        if(direction === "UP"){
+    isMoveAllowed(cell, direction) {
+        if (direction === "UP") {
             return !cell.topWall;
-        } else if(direction === "DOWN"){
+        } else if (direction === "DOWN") {
             return !cell.bottomWall;
-        } else if(direction === "LEFT"){
+        } else if (direction === "LEFT") {
             return !cell.leftWall;
-        } else if(direction === "RIGHT") {
+        } else if (direction === "RIGHT") {
             return !cell.rightWall;
         }
     }

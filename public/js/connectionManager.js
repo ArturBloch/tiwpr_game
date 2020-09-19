@@ -43,14 +43,14 @@ module.exports = class ConnectionManager {
         }
     }
 
-    joinSession(sessionId){
+    joinSession(sessionId) {
         this.send([{
             type: 'join-session',
             value: [sessionId]
         }]);
     }
 
-    getArenaInformation(){
+    getArenaInformation() {
         this.send([{
             type: 'need-arena-info',
             value: []
@@ -82,30 +82,25 @@ module.exports = class ConnectionManager {
             const message = messages[i++];
             if (message === "time-update") {
                 this.arena.setTime(messages[i++], performance.now());
-                // console.log("new time" + this.arena.timer);
             }
-            if (message === "current-player") {
-                let value = messages[i++];
-                this.arena.setCurrentPlayer(value)
-                console.log("update player ", value)
-                // console.log("player turn" + this.arena.currentPlayer.name);
+            if(message === "game-started"){
+                let gameStarted = messages[i++] === "true";
+                this.arena.gameStarted = gameStarted;
             }
-            if (message=== "client-id") {
+            if (message === "client-id") {
                 let value = messages[i++];
                 localStorage.setItem("id", value);
-                // console.log("my id " + this.id);
             }
             if (message === "new-name") {
                 let value = messages[i++];
                 localStorage.setItem("name", value);
                 this.arena.player1.name = value;
                 this.events.emit('change-name', value);
-                // console.log("my id " + this.id);
             }
-            if(message === "refresh-lobby-list"){
+            if (message === "refresh-lobby-list") {
                 let arr = [];
                 console.log("ARRAY", arr);
-                while(messages[i] !== "END"){
+                while (messages[i] !== "END") {
                     arr.push(messages[i++]);
                 }
                 console.log("ARRAY", arr);
@@ -113,22 +108,18 @@ module.exports = class ConnectionManager {
             }
             if (message === "session-join-result") {
                 let response = messages[i++];
-                if(window.location.hash === ''){
-                    console.log("RESPONSE " + response);
-                    window.location.hash = response;
-                }
                 this.events.emit('join-session-response', response);
             }
             if (message === "maze-data") {
                 let y = 0;
                 let x = 0;
-                while(messages[i] !== "END"){
+                while (messages[i] !== "END") {
                     this.arena.maze[y][x].topWall = messages[i++] === "1";
                     this.arena.maze[y][x].bottomWall = messages[i++] === "1";
                     this.arena.maze[y][x].leftWall = messages[i++] === "1";
                     this.arena.maze[y][x].rightWall = messages[i++] === "1";
                     x++;
-                    if(x % 15 === 0){
+                    if (x % 15 === 0) {
                         y++;
                         x = 0;
                         console.log(y, x)
@@ -136,25 +127,37 @@ module.exports = class ConnectionManager {
                 }
                 this.arena.loaded = true;
             }
-            if (message === "playerGameId-newName") {
+            if (message === "player-ids") {
+                let myGameId = messages[i++];
+                let enemyGameId = messages[i++];
+                this.arena.newPlayerGameIds(myGameId, enemyGameId);
+            }
+            if (message === "player-name") {
                 this.arena.playerNewName(messages[i++], messages[i++]);
             }
-            if(message === "player-game-ids"){
-                this.arena.newPlayerGameIds(messages[i++], messages[i++]);
+            if (message === "changed-ready-status") {
+                let playerId = messages[i++];
+                let readyStatus = messages[i++] === "true";
+                this.arena.changePlayerStatus(playerId, readyStatus);
             }
-            if(message === "changed-ready-status"){
-                this.arena.changePlayerStatus(messages[i++], messages[i++]);
+            if (message === "readyTime") {
+                this.arena.readyTime = Number(messages[i++]);
             }
-            if(message === "countdown-update"){
-                this.arena.setCountdownTimer(messages[i++], performance.now());
+            if(message === "gameTime"){
+                this.arena.gameTime = Number(messages[i++]);
+                if(this.arena.gameTime > 0){
+                    this.arena.gameStarted = true;
+                    this.arena.player1.ready = true;
+                    this.arena.player2.ready = true;
+                }
             }
-            if(message === "gameId-playerPos"){
+            if (message === "gameId-playerPos") {
                 let gameId = messages[i++];
                 let column = messages[i++];
                 let row = messages[i++];
                 this.arena.setPlayerPosition(gameId, column, row);
             }
-            if(message === "maze-start-exit"){
+            if (message === "maze-start-exit") {
                 let startingX = messages[i++];
                 let startingY = messages[i++];
                 let endingX = messages[i++];
@@ -162,31 +165,36 @@ module.exports = class ConnectionManager {
                 this.arena.setStart(startingX, startingY);
                 this.arena.setExit(endingX, endingY);
             }
-            if(message === "player-position"){
+            if (message === "player-position") {
                 let gameId = messages[i++];
                 let positionX = messages[i++];
                 let positionY = messages[i++];
                 this.arena.setPlayerPosition(gameId, positionX, positionY);
             }
-            if(message === "player-finished"){
+            if (message === "player-finished") {
                 let gameId = messages[i++];
                 let mazeTimer = messages[i++];
                 this.arena.setPlayerFinalMazeTimer(gameId, mazeTimer);
             }
-            if(message === "game-finished"){
+            if (message === "game-finished") {
                 const winner = messages[i++];
                 console.log("msg winner " + winner);
                 this.arena.setWinner(winner);
             }
-            if(message === "pong"){
+            if (message === "pong") {
                 this.isAlive = true;
             }
-            if(message === "ping"){
+            if (message === "ping") {
                 this.isAlive = true;
                 this.send([{
                     type: 'pong',
                     value: [],
                 }]);
+            }
+            if (message === "player-connection-status") {
+                let playerId = messages[i++];
+                let connected = messages[i++] === "true";
+                this.arena.changeConnectionStatus(playerId, connected);
             }
         }
     }
@@ -195,14 +203,14 @@ module.exports = class ConnectionManager {
         return new TextDecoder().decode(data);
     }
 
-    initializeConnection(){
+    initializeConnection() {
         let message = this.storedId === null ? "noId" : this.storedId;
         console.log("my id is " + this.storedId);
         this.send([{
             type: 'welcome',
             value: [message],
         }]);
-        if(this.storedName !== null){
+        if (this.storedName !== null) {
             this.changeName(this.storedName);
         }
     }
@@ -221,22 +229,22 @@ module.exports = class ConnectionManager {
         }]);
     }
 
-    sendMoveAction(move){
+    sendMoveAction(move) {
         this.send([{
             type: 'player-moved',
             value: [move]
         }]);
     }
 
-    sendKeyPress(key){
+    sendKeyPress(key) {
         this.send([{
             type: 'key-pressed',
             value: [key]
         }]);
     }
 
-    heartbeat(){
-        if (this.isAlive === false){
+    heartbeat() {
+        if (this.isAlive === false) {
             this.conn.close();
             return;
         }

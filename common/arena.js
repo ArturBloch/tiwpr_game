@@ -123,6 +123,8 @@ module.exports = class Arena {
     }
 
     getWinner() {
+        if(this.player1.finished && !this.player2.finished) return this.player1;
+        if(this.player2.finished && !this.player1.finished) return this.player2;
         if (this.player1.mazeTimer > this.player2.mazeTimer) return this.player2;
         if (this.player2.mazeTimer > this.player1.mazeTimer) return this.player1;
         return null;

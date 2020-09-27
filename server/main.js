@@ -276,10 +276,9 @@ function removeClient(key, client) {
     if (client.session != null) {
         client.session.removeClient(client);
         client.session = null;
+        if(client.session.finished) clients.delete(key);
+        console.log("removing client " + key);
     }
-    if(client.session != null && client.session.finished)
-    clients.delete(key);
-    console.log("removing client " + key);
 }
 
 function updateClients() {

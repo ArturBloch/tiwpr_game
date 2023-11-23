@@ -16,7 +16,7 @@
   "dependencies": {
     "bootstrap": "^4.5.2",
     "express": "^4.17.1",
-    "uuid": "^8.3.0",
+    "uuid": "^8.3.2",
     "ws": "^7.3.1"
   },
   "devDependencies": {

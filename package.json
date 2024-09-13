@@ -14,10 +14,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bootstrap": "^4.5.2",
-    "express": "^4.17.1",
-    "uuid": "^8.3.0",
-    "ws": "^7.3.1"
+    "bootstrap": "^4.6.2",
+    "express": "^4.19.2",
+    "uuid": "^8.3.2",
+    "ws": "^7.5.10"
   },
   "devDependencies": {
     "browserify": "^16.5.2",
